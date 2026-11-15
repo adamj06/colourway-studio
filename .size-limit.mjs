@@ -14,8 +14,13 @@ function firstLoadScripts() {
   const html = readFileSync(htmlPath, 'utf8');
   const urls = [...html.matchAll(/(?:src|href)="(\/_next\/static\/[^"]+\.js)"/g)].map((m) => m[1]);
   const files = [...new Set(urls)].map((url) => path.posix.join('.next', url.replace('/_next/', '')));
-  if (files.length === 0) {
-    throw new Error('size-limit: found no scripts in the built home page, so the gate would measure nothing.');
+  // A Next app page always references its runtime, framework and page chunks (7 at the time of writing). Far fewer
+  // means the HTML or the matching regex changed and the gate would quietly measure a fraction of the real load.
+  const MIN_SCRIPTS = 3;
+  if (files.length < MIN_SCRIPTS) {
+    throw new Error(
+      `size-limit: found ${files.length} scripts in the built home page, expected at least ${MIN_SCRIPTS}, so the gate would under-measure.`,
+    );
   }
   return files;
 }

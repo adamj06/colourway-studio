@@ -14,7 +14,7 @@ if (!existsSync(path.join(root, 'node_modules'))) process.exit(0);
 const sh = (cmd, args) => spawnSync(cmd, args, { cwd: root, encoding: 'utf8', shell: process.platform === 'win32' });
 
 const status = sh('git', ['status', '--porcelain']).stdout ?? '';
-const codeChanged = status.split('\n').some((l) => /\.(ts|tsx|js|jsx|mjs)$/.test(l.trim()));
+const codeChanged = status.split('\n').some((l) => /\.(ts|tsx|js|jsx|mjs|cjs|mts|cts)$/.test(l.trim()));
 if (!codeChanged) process.exit(0);
 
 const failures = [];

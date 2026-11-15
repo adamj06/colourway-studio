@@ -13,7 +13,8 @@ const hasMutable = (dir) =>
   readdirSync(dir, { withFileTypes: true }).some((entry) => {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) return hasMutable(full);
-    return /\.ts$/.test(entry.name) && !/\.test\.ts$/.test(entry.name);
+    // Declaration files (.d.ts) have nothing to mutate.
+    return /\.ts$/.test(entry.name) && !/\.(test|d)\.ts$/.test(entry.name);
   });
 
 if (!existsSync(target) || !hasMutable(target)) {

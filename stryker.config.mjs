@@ -4,7 +4,9 @@ const strykerConfig = {
   testRunner: 'vitest',
   plugins: ['@stryker-mutator/vitest-runner'],
   vitest: { configFile: 'vitest.config.ts' },
-  mutate: ['src/lib/colour/**/*.ts', '!src/lib/colour/**/*.test.ts'],
+  mutate: ['src/lib/colour/**/*.ts', '!src/lib/colour/**/*.test.ts', '!src/lib/colour/**/*.d.ts'],
+  // Keep build output and reports out of the sandbox copy.
+  ignorePatterns: ['.next', 'coverage', 'reports', 'playwright-report', 'test-results'],
   coverageAnalysis: 'perTest',
   reporters: ['clear-text', 'progress', 'html'],
   htmlReporter: { fileName: 'reports/mutation/index.html' },
