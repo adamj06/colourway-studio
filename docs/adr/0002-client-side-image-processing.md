@@ -32,6 +32,14 @@ V&A images load **directly from `framemark.vam.ac.uk` in the browser**. There is
 - `img-src 'self' blob: data: https://framemark.vam.ac.uk`. The framemark host is needed because images load directly. `blob:` and `data:` are for canvas export and previews.
 - `connect-src 'self'`. This stays as it is **as long as images are loaded through `<img>` and never through `fetch` or `XMLHttpRequest`**. `<img>` loads are governed by `img-src`, and canvas `drawImage` of a CORS-enabled image needs no `connect-src` entry. If a later feature fetches image bytes with `fetch` (for example, to read a full-resolution file for export), `connect-src` must gain `https://framemark.vam.ac.uk` and this ADR must be updated.
 
+## Palette extraction (feature 003)
+
+- **Pixels without a second download.** The design view's already loaded `<img>` is shrunk with `createImageBitmap(img, { resizeWidth, resizeHeight })` to at most 600 px on the longest side and the bitmap is **transferred** to the worker, which reads it through an `OffscreenCanvas`. If `createImageBitmap` or `OffscreenCanvas` is missing (or rejects), the page draws to a small canvas and transfers the RGBA buffer instead. Both paths use the image that is already on screen, so `connect-src` stays `'self'`.
+- **Same result as `!600,600`.** Analysing the downscaled display image gives the same palette a separate `!600,600` request would, without a second request.
+- **Lazy loading.** The worker is created with `new Worker(new URL(...), { type: 'module' })` only on the design page and only after the image has loaded, so no colour code is in the first-load JS for `/`.
+- **Cancellation.** Every request carries an id and the worker keeps only the latest: a superseded run checks between k-means iterations and posts nothing; the page also ignores any answer whose id is not the newest. The worker caches the sampled Lab values per image, so changing k never resends pixels.
+- **Colour conversion constants.** RGB to XYZ uses the sRGB matrix to the 4 decimals the standard publishes, with the CIE D65 white. A 7-digit matrix would differ from the independent oracle by up to 0.022 Lab; details in `tests/fixtures/colour/README.md`.
+
 ## Consequences
 
 - The colour maths lives in pure functions, which are easy to unit and mutation test.
