@@ -53,17 +53,22 @@ export async function handleObject(rawSystemNumber: string, deps: Deps<'getDesig
 
 /** Always 200: the app is up even when the V&A isn't. Reachability is reported, not enforced. */
 export async function handleHealth(deps: {
-  client: Pick<VamClient, 'ping'>;
+  /** `checkedAt` is set by a caching ping so the body says when the V&A was actually checked, not when served. */
+  client: { ping: () => Promise<{ reachable: boolean; latencyMs: number; checkedAt?: string }> };
   version: string | undefined;
   now?: () => number;
 }): Promise<HandlerResult> {
   const now = deps.now ?? Date.now;
-  const ping = await deps.client.ping().catch(() => ({ reachable: false, latencyMs: 0 }));
+  const ping = await deps.client.ping().catch(() => ({ reachable: false, latencyMs: 0, checkedAt: undefined }));
   return {
     status: 200,
     body: {
       version: deps.version ?? 'dev',
-      vam: { reachable: ping.reachable, latencyMs: ping.latencyMs, checkedAt: new Date(now()).toISOString() },
+      vam: {
+        reachable: ping.reachable,
+        latencyMs: ping.latencyMs,
+        checkedAt: ping.checkedAt ?? new Date(now()).toISOString(),
+      },
     },
   };
 }
