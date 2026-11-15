@@ -63,6 +63,6 @@
       "Adam set the rule for cancellation (measure first; remove the code if runs are under 150 ms, otherwise make the worker yield between iterations) and asked for the error-state e2e test to fail the worker for real, with no test hook in the app."
     ],
     "reviewFindingsFixed": 20,
-    "prUrl": null
+    "prUrl": "https://github.com/adamj06/colourway-studio/pull/13"
   }
 ]
