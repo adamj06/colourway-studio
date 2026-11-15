@@ -42,6 +42,14 @@ From Bruce Lindbloom's equation pages (fetched 2026-11-15):
 
 These pages give formulas and constants but no worked sRGB→Lab values, which is why the oracle above exists.
 
-## Known difference: which D65 white
+## Known difference: matrix precision (not the white point)
 
-Lindbloom's D65 white (0.95047, 1, 1.08883) and the CIE xy chromaticity (0.3127, 0.3290) used by `colour-science` differ in the fourth significant figure (Z = 1.08883 vs about 1.08906). With Lindbloom's matrix and white, sRGB red is L\*53.2408 a\*80.0925 b\*67.2032. With the `colour-science` oracle it is L\*53.2329 a\*80.1112 b\*67.2237. The largest difference over the 43 colours is 0.022 (magenta), more than the ±0.01 test tolerance. The implementation has to pick one definition. The oracle file is what the tests check against, so the implementation follows the oracle's definition. See the feature 003 notes.
+The oracle (`colour-science` 0.4.7) converts with the sRGB matrix rounded to 4 decimals, as the sRGB standard (IEC 61966-2-1) publishes it, and the D65 white from the CIE chromaticity xy = (0.3127, 0.3290):
+
+```
+[[0.4124, 0.3576, 0.1805],
+ [0.2126, 0.7152, 0.0722],
+ [0.0193, 0.1192, 0.9505]]
+```
+
+(read from `colour.models.RGB_COLOURSPACE_sRGB.matrix_RGB_to_XYZ` in the pinned version.) Lindbloom's 7-digit matrix with his D65 white (0.95047, 1, 1.08883), and a matrix derived from the primaries with the CIE white, both differ from the oracle by up to 0.022 in Lab (largest for magenta; red is L\*53.2408 a\*80.0925 b\*67.2032 with Lindbloom's constants against the oracle's 53.2329, 80.1112, 67.2237). That is more than the ±0.01 test tolerance, which was not widened: `src/lib/colour/convert.ts` uses the oracle's 4-decimal matrix and CIE white, and the 43 oracle colours match within 0.01. A 0.02 Lab difference is far below a visible difference (ΔE00 about 1). The inverse matrix is computed numerically from the same matrix so conversions round trip exactly.
