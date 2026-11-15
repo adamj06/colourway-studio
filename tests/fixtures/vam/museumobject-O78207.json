@@ -1,0 +1,181 @@
+{
+  "meta": {
+    "version": "2.1",
+    "_links": {
+      "self": { "href": "https://api.vam.ac.uk/v2/object/O78207" },
+      "collection_page": { "href": "https://collections.vam.ac.uk/item/O78207/" }
+    },
+    "images": {
+      "_primary_thumbnail": "https://framemark.vam.ac.uk/collections/2020MN1492/full/!100,100/0/default.jpg",
+      "_iiif_image": "https://framemark.vam.ac.uk/collections/2020MN1492/",
+      "_alt_iiif_image": [],
+      "imageResolution": "high",
+      "_images_meta": [
+        { "assetRef": "2020MN1492", "copyright": "© Victoria and Albert Museum, London", "sensitiveImage": false },
+        { "assetRef": "2006AT7700", "copyright": "© Victoria and Albert Museum, London", "sensitiveImage": false }
+      ]
+    },
+    "see_also": { "_iiif_pres": "https://iiif.vam.ac.uk/collections/O78207/manifest.json", "_alt_iiif_pres": [] }
+  },
+  "record": {
+    "systemNumber": "O78207",
+    "accessionNumber": "E.3706-1927",
+    "objectType": "Wallpaper sample",
+    "titles": [{ "title": "Indian", "type": "manufacturer's title" }],
+    "summaryDescription": "<b>Object Type</b><br>In Britain, paper printed with patterns has been used for decorating walls since the 16th century. By the late 19th century wallpapers were widely used by all classes, both in homes and in public buildings.<br><br><b>Design & Designing</b><br>The pattern of this Morris & Co. wallpaper is said to have been adapted from an early 18th-century wallpaper by an unknown designer. The source for this earlier paper was an Indian chintz (painted or printed cotton) pattern. There has always been a close relationship between wallpapers and textiles: in the 18th century wallpapers were designed to imitate the patterns and even the textures of embroideries, silks, brocades and velvets and other fabrics.<br><br><b>People</b><br>Although this wallpaper was produced by the company of William Morris, it was not designed by Morris himself. A letter from Morris's business manager suggests that this paper was the work of the architect George Gilbert Scott (1839-1897). In 1874 Scott was one of the founders of Watts & Co, a company which issued some wallpapers in a similar style.",
+    "physicalDescription": "Specimen of 'Indian' wallpaper, a formalised foliate design, brown on a pink ground; Colour woodblock print in distemper, on paper; Inscribed on the back in ink with title, number etc.\r\nPart of a pattern book containing 23 Morris & Co. patterns (E.3698-3704, 3706-3718, 3720-3722-1927).",
+    "artistMakerPerson": [
+      {
+        "name": { "text": "Morris, William", "id": "A8676" },
+        "association": { "text": "designer", "id": "AAT25190" },
+        "note": ""
+      }
+    ],
+    "artistMakerOrganisations": [
+      {
+        "name": { "text": "Morris & Co.", "id": "A1365" },
+        "association": { "text": "publisher", "id": "x32600" },
+        "note": ""
+      }
+    ],
+    "artistMakerPeople": [],
+    "materials": [{ "text": "printing ink", "id": "AAT187371" }],
+    "techniques": [{ "text": "colour woodblock print", "id": "x37101" }],
+    "materialsAndTechniques": "Colour woodblock print on paper",
+    "categories": [
+      { "text": "Wall coverings", "id": "THES48878" },
+      { "text": "Interiors", "id": "THES48933" },
+      { "text": "Prints", "id": "THES48903" }
+    ],
+    "styles": [{ "text": "Arts and Crafts (movement)", "id": "AAT21205" }],
+    "collectionCode": { "text": "PDP", "id": "THES48595" },
+    "images": ["2020MN1492", "2006AT7700"],
+    "imageResolution": "high",
+    "galleryLocations": [
+      { "current": { "text": "125C (VA)", "id": "THES49896" }, "free": "", "case": "CA2", "shelf": "", "box": "24" }
+    ],
+    "partTypes": [[{ "text": "wallpaper", "id": "" }], [{ "text": "print", "id": "" }]],
+    "contentWarnings": [{ "apprise": "", "note": "" }],
+    "placesOfOrigin": [
+      {
+        "place": { "text": "London", "id": "x28980" },
+        "association": { "text": "printed", "id": "AAT53319" },
+        "note": ""
+      }
+    ],
+    "productionDates": [
+      {
+        "date": { "text": "ca. 1868-70", "earliest": "1863-01-01", "latest": "1872-12-31" },
+        "association": { "text": "made", "id": "x28654" },
+        "note": ""
+      }
+    ],
+    "associatedObjects": [
+      { "object": { "text": "E.748-1915", "id": "O249018" }, "association": "Colourway" },
+      { "object": { "text": "E.757-1915", "id": "O249027" }, "association": "Colourway" },
+      { "object": { "text": "E.758-1915", "id": "O249028" }, "association": "Colourway" },
+      { "object": { "text": "E.759-1915", "id": "O249029" }, "association": "Colourway" },
+      { "object": { "text": "E.3707-1927", "id": "O249413" }, "association": "Colourway" },
+      { "object": { "text": "E.3708-1927", "id": "O249415" }, "association": "Colourway" },
+      { "object": { "text": "E.3709-1927", "id": "O249416" }, "association": "Colourway" }
+    ],
+    "creditLine": "Bequeathed by J. R. Holliday",
+    "dimensions": [
+      {
+        "dimension": "Height",
+        "value": "68.6",
+        "unit": "cm",
+        "qualifier": "",
+        "date": { "text": "", "earliest": null, "latest": null },
+        "part": "",
+        "note": ""
+      },
+      {
+        "dimension": "Width",
+        "value": "50",
+        "unit": "cm",
+        "qualifier": "",
+        "date": { "text": "", "earliest": null, "latest": null },
+        "part": "",
+        "note": ""
+      }
+    ],
+    "dimensionsNote": "Dimensions taken from: Parry, Linda, ed. <u>William Morris</u> London : Philip Wilson in association with the Victoria and Albert Museum, 1996. Published to coincide with an exhibition at the Victoria and Albert Museum, 9 May-1 Sept. 1996.",
+    "marksAndInscriptions": [
+      {
+        "content": "",
+        "inscriber": { "name": { "text": "", "id": "" }, "association": { "text": "", "id": "" } },
+        "date": { "text": "", "earliest": null, "latest": null },
+        "description": "",
+        "interpretation": "",
+        "language": "",
+        "medium": "",
+        "method": "",
+        "position": "",
+        "script": "",
+        "translation": "",
+        "transliteration": "",
+        "type": "",
+        "note": "Inscribed on the back in ink with title, number etc."
+      }
+    ],
+    "objectHistory": "Originally in a volume, this paper was part of a set that was split up, E.3705, 3719-1927 are missing. \r\n\r\nThe source of this pattern was described in 1884 as an 'early 18th-century' wallpaper. This was in turn based on an Indian chintz. Several wallpapers adapted from earlier examples were designed and printed for Morris & Co.\r\n\r\nAlthough this wallpaper was produced by the company of William Morris, it was not designed by Morris himself. A letter from Morris's business manager suggests that this paper was the work of the architect George Gilbert Scott (1839-1897). In 1874 Scott was one of the founders of Watts & Co, a company which issued some wallpapers in a similar style.",
+    "historicalContext": "",
+    "briefDescription": "Specimen of 'Indian' wallpaper, a formalised foliate design, brown on a pink ground; Colour woodblock print in distemper, on paper; Possibly designed by Sir George Gilbert Scott; Published by Morris & Co.; Printed by Jeffrey & Co.; Part of a pattern book of 23 Morris & Co. patterns (E.3698-3704, 3706-3718, 3720-3722-1927); England; 1868-70.",
+    "bibliographicReferences": [
+      {
+        "reference": { "text": "", "id": "" },
+        "details": "",
+        "free": "Oman, Charles C., and Hamilton, Jean. <u>Wallpapers: a history and illustrated catalogue of the collection of the Victoria and Albert Museum</u>. London: Sotheby Publications, in association with the Victoria and Albert Museum, 1982."
+      },
+      {
+        "reference": { "text": "", "id": "" },
+        "details": "",
+        "free": "Saunders, Gill. <u>Wallpaper in Interior Decoration</u>. V&A Publications. London. 2002. pp. 112. pl 94."
+      },
+      {
+        "reference": { "text": "", "id": "" },
+        "details": "",
+        "free": "Parry, Linda, ed. <u>William Morris</u> London : Philip Wilson in association with the Victoria and Albert Museum, 1996. Published to coincide with an exhibition at the Victoria and Albert Museum, 9 May-1 Sept. 1996."
+      },
+      {
+        "reference": { "text": "", "id": "" },
+        "details": "",
+        "free": "<u>Victoria and Albert Museum, Department of Engraving, Illustration and Design and Department of Paintings, Accessions 1927</u>, London: Board of Education, 1928"
+      }
+    ],
+    "production": "Part of a pattern book containing 23 Morris & Co. patterns (E.3698-3704, 3706-3718, 3720-3722-1927).",
+    "productionType": { "text": "", "id": "" },
+    "contentDescription": "",
+    "contentPlaces": [],
+    "associatedPlaces": [],
+    "contentPerson": [],
+    "associatedPerson": [],
+    "contentOrganisations": [],
+    "associatedOrganisations": [],
+    "contentPeople": [],
+    "associatedPeople": [],
+    "contentEvents": [],
+    "associatedEvents": [],
+    "contentOthers": [],
+    "contentConcepts": [],
+    "contentLiteraryRefs": [],
+    "galleryLabels": [
+      {
+        "text": "British Galleries:\nThe source of this pattern was described in 1884 as an 'early 18th-century' wallpaper. This was in turn based on an Indian chintz. Several wallpapers adapted from earlier examples were designed and printed for Morris & Co.",
+        "date": { "text": "27/03/2003", "earliest": "2003-03-27", "latest": "2003-03-27" }
+      }
+    ],
+    "partNumbers": ["E.3706-1927"],
+    "accessionNumberNum": "3706",
+    "accessionNumberPrefix": "E",
+    "accessionYear": 1927,
+    "otherNumbers": [],
+    "copyNumber": "",
+    "aspects": ["WHOLE"],
+    "assets": ["2019LR1120", "2019LP6263", "2019LV6046"],
+    "recordModificationDate": "2025-04-12",
+    "recordCreationDate": "2003-03-27",
+    "availableToBook": false
+  }
+}
