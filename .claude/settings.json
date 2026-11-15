@@ -80,7 +80,9 @@
       "Bash(vercel deploy --prod:*)",
       "Bash(git push --force:*)",
       "Bash(git push -f:*)",
-      "Bash(npm publish:*)"
+      "Bash(npm publish:*)",
+      "mcp__claude-in-chrome",
+      "mcp__claude_ai_Claude_Docs"
     ]
   },
   "statusLine": {
