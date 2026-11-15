@@ -46,6 +46,8 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      # Uploaded on every run, so this job must NEVER receive VERCEL_AUTOMATION_BYPASS_SECRET (reports can echo
+      # request details). The secret is only passed to smoke.yml, which uploads nothing.
       - uses: actions/upload-artifact@v4
         if: always()
         with:

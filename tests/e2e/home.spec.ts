@@ -14,7 +14,13 @@ test.describe('home page', () => {
     expect(response).not.toBeNull();
     const headers = response!.headers();
 
-    expect(headers['content-security-policy']).toContain("img-src 'self' blob: data: https://framemark.vam.ac.uk");
+    const csp = headers['content-security-policy'] ?? '';
+    expect(csp).toContain("img-src 'self' blob: data: https://framemark.vam.ac.uk");
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).toContain("worker-src 'self'");
+    // A build that ran with the wrong NODE_ENV would ship the development CSP, which allows eval.
+    expect(csp).not.toContain('unsafe-eval');
+    expect(headers['cross-origin-opener-policy']).toBe('same-origin');
     expect(headers['x-content-type-options']).toBe('nosniff');
     expect(headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
     expect(headers['x-frame-options']).toBe('DENY');
@@ -23,7 +29,13 @@ test.describe('home page', () => {
 
     if (!process.env.BASE_URL) {
       expect(headers['strict-transport-security']).toBeUndefined();
-      expect(headers['content-security-policy']).not.toContain('upgrade-insecure-requests');
+      expect(csp).not.toContain('upgrade-insecure-requests');
+    }
+    // smoke.yml passes the Vercel environment of the deployment under test. Assert on includeSubDomains and the CSP
+    // directive rather than mere presence, because Vercel can add its own HSTS header on *.vercel.app.
+    if (process.env.DEPLOY_ENV?.toLowerCase() === 'production') {
+      expect(headers['strict-transport-security']).toContain('includeSubDomains');
+      expect(csp).toContain('upgrade-insecure-requests');
     }
   });
 });
