@@ -1,0 +1,7 @@
+{
+  "url": "https://api.vam.ac.uk/v2/object/not-an-id",
+  "status": 404,
+  "body": {
+    "detail": "Not Found"
+  }
+}
