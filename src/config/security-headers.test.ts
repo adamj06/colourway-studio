@@ -49,6 +49,7 @@ describe.each(vercelEnvs)('always-present headers (vercelEnv=%s)', (_name, verce
     expect(d.get('font-src')).toBe("'self'");
     expect(d.get('connect-src')).toBe("'self'");
     expect(d.get('object-src')).toBe("'none'");
+    expect(d.get('worker-src')).toBe("'self'");
     expect(d.get('base-uri')).toBe("'self'");
     expect(d.get('form-action')).toBe("'self'");
     expect(d.get('frame-ancestors')).toBe("'none'");

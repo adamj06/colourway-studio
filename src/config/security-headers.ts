@@ -18,6 +18,8 @@ function contentSecurityPolicy({ vercelEnv, nodeEnv }: SecurityHeaderInput): str
     IMG_SRC,
     "font-src 'self'",
     "connect-src 'self'",
+    // Explicit rather than falling back to script-src: only same-origin (bundled) workers, never blob: workers.
+    "worker-src 'self'",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
