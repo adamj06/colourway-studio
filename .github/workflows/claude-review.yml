@@ -1,0 +1,29 @@
+name: Claude PR review
+
+# Second-opinion review on every PR, from a fresh context with no knowledge of how the code was written.
+# Auth: run `claude setup-token` locally and save it as the CLAUDE_CODE_OAUTH_TOKEN repo secret
+# (uses your subscription), or use an ANTHROPIC_API_KEY secret instead. Check the action's README for current inputs.
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  review:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Review this PR against CLAUDE.md. Focus on correctness, test quality (would the tests catch a broken implementation?),
+            security of the V&A proxy (SSRF, validation) and XSS. Post one concise review comment with Must fix / Should fix items
+            and file:line references. Don't suggest style nits that the linter already covers.
+          claude_args: "--model sonnet --max-turns 15"

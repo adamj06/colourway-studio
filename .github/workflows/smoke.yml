@@ -1,0 +1,28 @@
+name: Post-deploy smoke test
+
+# Runs after every successful Vercel deployment (preview and production) against the real URL.
+# Proves the deployed app works, not just the build.
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Smoke tests against the deployment
+        env:
+          BASE_URL: ${{ github.event.deployment_status.environment_url }}
+          # Needed only if Vercel Deployment Protection is on for previews (Vercel project > Settings > Deployment Protection).
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: npx playwright test --grep @smoke

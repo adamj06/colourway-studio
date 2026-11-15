@@ -1,0 +1,32 @@
+name: V&A contract check
+
+# Unit tests run against recorded fixtures, so they can't notice if the V&A API changes shape.
+# This hits the live API daily and validates real responses against our zod schemas.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 6 * * *'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:contract
+      - name: Open an issue on drift
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create --title "V&A API contract drift detected ($(date -u +%F))" \
+            --body "The daily contract check failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --label contract-drift || true

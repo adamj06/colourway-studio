@@ -1,0 +1,8 @@
+{
+  "_note": "Spend guardrails, read by .claude/hooks/budget.mjs on every prompt. USD figures need pricing.json filled in; token figures always apply. Raise these deliberately, not by habit.",
+  "dailySoftUsd": 15,
+  "dailyHardUsd": 30,
+  "sessionSoftTokens": 4000000,
+  "sessionHardTokens": 10000000,
+  "contextWarnTokens": 120000
+}

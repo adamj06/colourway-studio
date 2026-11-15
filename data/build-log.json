@@ -1,0 +1,13 @@
+[
+  {
+    "id": "000-guardrails",
+    "title": "Guardrails before code",
+    "date": "2026-11-15",
+    "summary": "Set up CLAUDE.md, a quality-gates contract, hooks (secret and destructive-command guard, format and lint on edit, typecheck and tests on stop, spend and context budget guard, live cost status line, token ledger), human commit checks (husky, lint-staged, commitlint), Dependabot, CodeQL, daily API contract check, post-deploy smoke tests, a design-time threat model, a runbook and a production-readiness record, 28 tests for the guardrail hooks themselves, subagents (test-writer, code-reviewer, security-reviewer, api-scout), slash commands, ADRs and CI before writing any app code.",
+    "models": ["claude-opus-5-5"],
+    "subagents": [],
+    "humanInterventions": ["Adam chose the problem, the stack (Next.js on Vercel) and the guardrail set."],
+    "reviewFindingsFixed": 0,
+    "prUrl": null
+  }
+]

@@ -1,0 +1,6 @@
+{
+  "_note": "USD per million tokens. Fill in from the official Anthropic pricing page before relying on est_usd. Keys are matched as substrings of the model id.",
+  "opus": { "input": null, "output": null, "cacheWrite": null, "cacheRead": null },
+  "sonnet": { "input": null, "output": null, "cacheWrite": null, "cacheRead": null },
+  "haiku": { "input": null, "output": null, "cacheWrite": null, "cacheRead": null }
+}
