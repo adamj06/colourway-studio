@@ -1,9 +1,7 @@
 import { z } from 'zod';
+import { MAX_PAGE, MAX_QUERY_LENGTH } from './query-limits';
 
 export type ParseResult<T> = { ok: true; value: T } | { ok: false; message: string };
-
-export const MAX_QUERY_LENGTH = 100;
-export const MAX_PAGE = 100;
 
 const qSchema = z.string().trim().max(MAX_QUERY_LENGTH);
 const pageSchema = z

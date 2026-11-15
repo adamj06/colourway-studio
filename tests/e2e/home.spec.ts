@@ -1,9 +1,12 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from './fixtures';
+import { mockVam } from './mock-vam';
 
 test.describe('home page', () => {
   test('home page has no serious or critical accessibility violations @smoke', async ({ page }) => {
+    await mockVam(page);
     await page.goto('/');
+    await expect(page.getByRole('status')).toContainText('designs');
     const results = await new AxeBuilder({ page }).analyze();
     const bad = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
     expect(bad, `Serious/critical a11y violations: ${bad.map((v) => v.id).join(', ')}`).toHaveLength(0);

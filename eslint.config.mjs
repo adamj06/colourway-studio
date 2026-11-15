@@ -92,6 +92,13 @@ const eslintConfig = defineConfig([
     },
   },
 
+  // The one <img> wrapper. V&A images are sized by the IIIF server and loaded directly, so next/image would only burn
+  // Vercel image-optimisation quota (docs/adr/0002-client-side-image-processing.md). Any other <img> stays flagged.
+  {
+    files: ['src/app/_components/DesignImage.tsx'],
+    rules: { '@next/next/no-img-element': 'off' },
+  },
+
   // The structured logger is the one place allowed to call console.
   {
     files: ['src/lib/log/**/*.ts'],

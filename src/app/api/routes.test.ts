@@ -7,6 +7,9 @@ const cachedSearch = vi.fn();
 const cachedDesign = vi.fn();
 const cachedPing = vi.fn();
 
+// connection() only works inside a Next request scope.
+vi.mock('next/server', () => ({ connection: () => Promise.resolve() }));
+
 vi.mock('@/server/vam-cache', () => ({
   cachedClient: {
     searchDesigns: (p: { q?: string; page?: number }) => cachedSearch(p.q ?? '', p.page ?? 1) as unknown,
