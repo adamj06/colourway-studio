@@ -1,4 +1,5 @@
 import { isValidIiifBase } from './iiif';
+import { isCollectionUrl, isSystemNumber } from './urls';
 import { objectResponseSchema, searchResponseSchema, type ObjectResponse, type SearchResponse } from './schemas';
 import type { Design, DesignSummary, SearchResult } from './types';
 
@@ -13,7 +14,16 @@ const untitled = (objectType: string | null): string => (objectType ? `Untitled 
 
 // ---------- HTML to text (V&A descriptions contain <b>, <br> and entities) ----------
 
-const NAMED_ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+const NAMED_ENTITIES: Record<string, string> = {
+  ...{ amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' },
+  ...{ ndash: '–', mdash: '—', lsquo: '‘', rsquo: '’', ldquo: '“', rdquo: '”', hellip: '…' },
+  ...{ copy: '©', reg: '®', trade: '™', pound: '£', euro: '€', deg: '°', middot: '·', times: '×' },
+  ...{ eacute: 'é', egrave: 'è', ecirc: 'ê', agrave: 'à', acirc: 'â', aacute: 'á', ccedil: 'ç' },
+  ...{ ouml: 'ö', uuml: 'ü', auml: 'ä', iacute: 'í', oacute: 'ó', ntilde: 'ñ' },
+};
+
+// A description is a few paragraphs. Capping the input keeps the tag regexes cheap on hostile input.
+const MAX_HTML_LENGTH = 20_000;
 
 function decodeEntity(match: string, body: string): string {
   const name = body.toLowerCase();
@@ -30,22 +40,33 @@ function decodeEntity(match: string, body: string): string {
  * stays text and can never become markup.
  */
 export function htmlToText(html: string): string {
-  return html
-    .replace(/<(script|style)\b[^>]*>[\s\S]*?(?:<\/\1\s*>|$)/gi, '')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p\s*>/gi, '\n\n')
-    .replace(/<[^>]*(?:>|$)/g, '')
-    .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (match, body: string) => decodeEntity(match, body))
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+  return (
+    html
+      .slice(0, MAX_HTML_LENGTH)
+      .replace(/<(script|style)\b[^>]*>[\s\S]*?(?:<\/\1\s*>|$)/gi, '')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p\s*>/gi, '\n\n')
+      .replace(/<\/(?:div|li|tr|h[1-6])\s*>/gi, '\n')
+      // Only `<` followed by a letter, `/` or `!` starts a tag, so a bare "a < b" stays text.
+      .replace(/<[a-zA-Z/!][^>]*(?:>|$)/g, '')
+      .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (match, body: string) => decodeEntity(match, body))
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  );
 }
 
 // ---------- search ----------
 
 function mapSearchRecord(record: SearchResponse['records'][number]): DesignSummary | null {
   const imageBaseUrl = record._images?._iiif_image_base_url;
-  if (!record._primaryImageId || !imageBaseUrl || !isValidIiifBase(imageBaseUrl)) return null;
+  if (
+    !isSystemNumber(record.systemNumber) ||
+    !record._primaryImageId ||
+    !imageBaseUrl ||
+    !isValidIiifBase(imageBaseUrl)
+  )
+    return null;
   const objectType = clean(record.objectType);
   return {
     systemNumber: record.systemNumber,
@@ -91,9 +112,20 @@ function descriptionOf(summary: string | null | undefined): string | null {
   return summary ? clean(htmlToText(summary)) : null;
 }
 
+function collectionUrlOf(href: string | null | undefined): string | null {
+  const cleaned = clean(href);
+  return cleaned !== null && isCollectionUrl(cleaned) ? cleaned : null;
+}
+
 function usableImageBase(parsed: ObjectResponse): string | null {
   const base = parsed.meta.images?._iiif_image;
-  if (parsed.record.images.length === 0 || !base || !isValidIiifBase(base)) return null;
+  if (
+    !isSystemNumber(parsed.record.systemNumber) ||
+    parsed.record.images.length === 0 ||
+    !base ||
+    !isValidIiifBase(base)
+  )
+    return null;
   return base;
 }
 
@@ -121,6 +153,6 @@ export function mapObjectResponse(raw: unknown): Design | null {
     description: descriptionOf(record.summaryDescription),
     imageBaseUrl,
     creditLine: clean(record.creditLine),
-    collectionUrl: clean(meta._links?.collection_page?.href),
+    collectionUrl: collectionUrlOf(meta._links?.collection_page?.href),
   };
 }

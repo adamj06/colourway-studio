@@ -1,10 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { appendPage, hasMorePages } from '@/lib/search/state';
 import { isSearchResult } from '@/lib/vam/guards';
 import type { DesignSummary, SearchResult } from '@/lib/vam/types';
 
 type Loaded = SearchResult & { key: string; failed: boolean };
+type More = { key: string; status: 'idle' | 'loading' | 'failed' };
 
 export type DesignSearch = {
   items: DesignSummary[];
@@ -21,27 +23,23 @@ export type DesignSearch = {
   retry: () => void;
 };
 
-async function fetchPage(q: string, page: number, signal?: AbortSignal): Promise<SearchResult> {
+async function fetchPage(q: string, page: number, signal: AbortSignal): Promise<SearchResult> {
   const params = new URLSearchParams({ page: String(page) });
   if (q) params.set('q', q);
-  const response = await fetch(`/api/vam/search?${params.toString()}`, signal ? { signal } : {});
+  const response = await fetch(`/api/vam/search?${params.toString()}`, { signal });
   if (!response.ok) throw new Error(`Search failed with ${String(response.status)}`);
   const json: unknown = await response.json();
   if (!isSearchResult(json)) throw new Error('Unexpected search response');
   return json;
 }
 
-function mergeItems(existing: DesignSummary[], more: DesignSummary[]): DesignSummary[] {
-  const seen = new Set(existing.map((item) => item.systemNumber));
-  return [...existing, ...more.filter((item) => !seen.has(item.systemNumber))];
-}
-
 /** Search state for the home page. `q` must already be debounced: this fires one request per distinct q. */
 export function useDesignSearch(q: string): DesignSearch {
   const [attempt, setAttempt] = useState(0);
   const [loaded, setLoaded] = useState<Loaded | null>(null);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [moreFailed, setMoreFailed] = useState(false);
+  const [more, setMore] = useState<More>({ key: '', status: 'idle' });
+  const moreController = useRef<AbortController | null>(null);
+  // Everything below is tied to this key, so an answer for an old query can never touch the current one.
   const key = `${q}\u0000${String(attempt)}`;
 
   useEffect(() => {
@@ -49,7 +47,6 @@ export function useDesignSearch(q: string): DesignSearch {
     fetchPage(q, 1, controller.signal).then(
       (result) => {
         setLoaded({ ...result, key, failed: false });
-        setMoreFailed(false);
       },
       () => {
         if (!controller.signal.aborted) {
@@ -59,43 +56,47 @@ export function useDesignSearch(q: string): DesignSearch {
     );
     return () => {
       controller.abort();
+      moreController.current?.abort();
+      // An aborted load-more never settles, so clear its state: otherwise coming back to this same query later
+      // would show a stuck, disabled "Loading…" button.
+      setMore((previous) => (previous.key === key ? { key, status: 'idle' } : previous));
     };
   }, [q, key]);
 
   const current = loaded?.key === key ? loaded : null;
+  const moreStatus = more.key === key ? more.status : 'idle';
 
   const loadMore = useCallback(() => {
-    if (!current || loadingMore) return;
-    setLoadingMore(true);
-    setMoreFailed(false);
-    fetchPage(q, current.page + 1).then(
+    if (!current || moreStatus === 'loading') return;
+    const controller = new AbortController();
+    moreController.current = controller;
+    setMore({ key, status: 'loading' });
+    fetchPage(q, current.page + 1, controller.signal).then(
       (result) => {
-        // Ignore the answer if the query changed while it was in flight.
-        setLoaded((prev) =>
-          prev?.key === key ? { ...prev, ...result, items: mergeItems(prev.items, result.items) } : prev,
-        );
-        setLoadingMore(false);
+        setLoaded((prev) => (prev?.key === key ? { ...prev, ...appendPage(prev, result) } : prev));
+        setMore({ key, status: 'idle' });
       },
       () => {
-        setMoreFailed(true);
-        setLoadingMore(false);
+        if (!controller.signal.aborted) setMore({ key, status: 'failed' });
       },
     );
-  }, [current, loadingMore, q, key]);
+  }, [current, moreStatus, q, key]);
 
   const retry = useCallback(() => {
     setAttempt((n) => n + 1);
   }, []);
 
+  return { ...describe(current, moreStatus), loadMore, retry };
+}
+
+function describe(current: Loaded | null, moreStatus: More['status']) {
   return {
     items: current?.items ?? [],
     total: current?.total ?? 0,
-    hasMore: current ? current.page < current.totalPages : false,
+    hasMore: current ? hasMorePages(current) : false,
     loading: current === null,
     failed: current?.failed ?? false,
-    loadingMore,
-    moreFailed,
-    loadMore,
-    retry,
+    loadingMore: moreStatus === 'loading',
+    moreFailed: moreStatus === 'failed',
   };
 }

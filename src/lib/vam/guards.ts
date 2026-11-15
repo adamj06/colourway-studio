@@ -1,4 +1,5 @@
 import { isValidIiifBase } from './iiif';
+import { isCollectionUrl, isSystemNumber } from './urls';
 import type { Design, DesignSummary, SearchResult } from './types';
 
 // Runtime checks for the JSON our own /api/vam/* routes return, used by client components. Deliberately
@@ -13,10 +14,13 @@ const isStrOrNull = (v: unknown): v is string | null => v === null || typeof v =
 const isCount = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isStrArray = (v: unknown): v is string[] => Array.isArray(v) && v.every(isStr);
 
+const isCollectionUrlOrNull = (v: unknown): boolean => v === null || (isStr(v) && isCollectionUrl(v));
+const isSysNum = (v: unknown): boolean => isStr(v) && isSystemNumber(v);
+
 function isSummary(v: unknown): v is DesignSummary {
   return (
     isObj(v) &&
-    isStr(v.systemNumber) &&
+    isSysNum(v.systemNumber) &&
     isStr(v.title) &&
     isStrOrNull(v.designer) &&
     isStrOrNull(v.date) &&
@@ -37,11 +41,9 @@ export function isSearchResult(v: unknown): v is SearchResult {
   );
 }
 
-const isHttpsUrlOrNull = (v: unknown): boolean => v === null || (isStr(v) && v.startsWith('https://'));
-
 function hasDesignIdentity(v: Obj): boolean {
   return (
-    isStr(v.systemNumber) &&
+    isSysNum(v.systemNumber) &&
     isStr(v.title) &&
     isStrArray(v.designers) &&
     isStrArray(v.manufacturers) &&
@@ -56,7 +58,7 @@ function hasDesignDetails(v: Obj): boolean {
     isStrOrNull(v.dimensions) &&
     isStrOrNull(v.description) &&
     isStrOrNull(v.creditLine) &&
-    isHttpsUrlOrNull(v.collectionUrl) &&
+    isCollectionUrlOrNull(v.collectionUrl) &&
     isStr(v.imageBaseUrl) &&
     isValidIiifBase(v.imageBaseUrl)
   );

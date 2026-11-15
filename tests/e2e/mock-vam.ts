@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Page, Route } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { mapObjectResponse, mapSearchResponse } from '../../src/lib/vam/map';
@@ -17,7 +17,24 @@ const PIXEL_PNG = Buffer.from(
 export const searchResult = mapSearchResponse(loadFixture('search-morris-wallpaper.json'));
 export const indianDesign = mapObjectResponse(loadFixture('museumobject-O78207.json'))!;
 
-export type MockOptions = { searchStatus?: number; objectStatus?: number };
+export type MockOptions = {
+  searchStatus?: number;
+  objectStatus?: number;
+  /** Hold the page-2 answer back, to test a "load more" that is still in flight when the query changes. */
+  page2DelayMs?: number;
+  page2Status?: number;
+};
+
+// Page 2 repeats the first design (the real V&A can shift items between pages) and adds one new design.
+export const pageTwoNewTitle = 'Second page design';
+
+async function respondPageTwo(route: Route, delayMs: number, status: number) {
+  if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
+  if (status >= 400) return route.fulfill({ status, json: { error: { code: 'upstream', message: 'down' } } });
+  const [first, second] = searchResult.items;
+  const items = [first!, { ...second!, systemNumber: 'O1999', title: pageTwoNewTitle }];
+  return route.fulfill({ status: 200, json: { items, page: 2, totalPages: 3, total: searchResult.total } });
+}
 
 export async function mockVam(page: Page, options: MockOptions = {}): Promise<{ searchUrls: string[] }> {
   const searchUrls: string[] = [];
@@ -40,6 +57,8 @@ export async function mockVam(page: Page, options: MockOptions = {}): Promise<{ 
         json: { error: { code: 'upstream', message: 'down' } },
       });
     }
+    const page = Number(new URL(route.request().url()).searchParams.get('page') ?? '1');
+    if (page === 2) return respondPageTwo(route, options.page2DelayMs ?? 0, options.page2Status ?? 200);
     const body = q === 'nomatch' ? { items: [], page: 1, totalPages: 0, total: 0 } : searchResult;
     return route.fulfill({ status: 200, json: body });
   });

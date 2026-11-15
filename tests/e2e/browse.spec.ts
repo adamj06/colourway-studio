@@ -1,7 +1,7 @@
 import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
-import { indianDesign, mockVam, searchResult } from './mock-vam';
+import { indianDesign, mockVam, pageTwoNewTitle, searchResult } from './mock-vam';
 
 async function expectNoSeriousA11yViolations(page: Page) {
   const results = await new AxeBuilder({ page }).analyze();
@@ -48,6 +48,39 @@ test.describe('browse and open a design', () => {
     await page.waitForTimeout(500);
     expect(searchUrls.length - before).toBe(1);
     expect(searchUrls.at(-1)).toContain('q=strawberry');
+  });
+
+  test('load more appends the next page without repeating a design', async ({ page }) => {
+    await mockVam(page);
+    await page.goto('/');
+    const links = page.locator('main ul a');
+    await expect(links).toHaveCount(searchResult.items.length);
+
+    await page.getByRole('button', { name: 'Load more designs' }).click();
+    await expect(page.getByRole('link', { name: new RegExp(pageTwoNewTitle) })).toBeVisible();
+    // Page 2 repeated the first design: it must not appear twice.
+    await expect(links).toHaveCount(searchResult.items.length + 1);
+  });
+
+  test('a load-more still in flight does not leak into a new search', async ({ page }) => {
+    await mockVam(page, { page2DelayMs: 1200, page2Status: 502 });
+    await page.goto('/');
+    await expect(page.locator('main ul a')).toHaveCount(searchResult.items.length);
+
+    await page.getByRole('button', { name: 'Load more designs' }).click();
+    await page.getByRole('searchbox').fill('nomatch');
+    await expect(page.getByRole('status')).toHaveText('No designs found for “nomatch”.');
+    // The old request fails after the query changed: no alert, and nothing stuck in "Loading…".
+    await page.waitForTimeout(1600);
+    await expect(page.getByRole('alert').filter({ hasText: 'more designs' })).toHaveCount(0);
+    await page.getByRole('searchbox').fill('');
+    await expect(page.getByRole('button', { name: 'Load more designs' })).toBeEnabled();
+  });
+
+  test('each design page has its own title', async ({ page }) => {
+    await mockVam(page);
+    await page.goto('/design/O78207');
+    await expect(page).toHaveTitle('Indian · Colourway Studio');
   });
 
   test('shows an empty state announced to assistive tech', async ({ page }) => {

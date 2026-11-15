@@ -1,4 +1,4 @@
-import { fetchWithRetry, UpstreamError } from '../http/fetch-with-retry';
+import { fetchJsonWithRetry, UpstreamError, type JsonResult } from '../http/fetch-with-retry';
 import { mapObjectResponse, mapSearchResponse } from './map';
 import type { Design, SearchResult } from './types';
 
@@ -65,6 +65,7 @@ export type VamClient = {
 function toVamError(error: unknown): VamError {
   if (error instanceof UpstreamError) {
     if (error.kind === 'timeout') return new VamError('timeout', 'The V&A API timed out');
+    if (error.kind === 'invalid') return new VamError('invalid_response', 'The V&A API sent an unacceptable response');
     return new VamError('upstream', 'The V&A API is unavailable', error.status);
   }
   return new VamError('invalid_response', 'Unexpected response from the V&A API');
@@ -74,23 +75,16 @@ export function createVamClient(deps: VamClientDeps = {}): VamClient {
   const now = deps.now ?? Date.now;
   const headers = { 'User-Agent': deps.userAgent ?? DEFAULT_USER_AGENT, Accept: 'application/json' };
 
-  const request = async (url: string): Promise<Response> => {
+  // The 5 s timeout covers the body as well as the headers, the body is size-capped and must be JSON.
+  const request = async (url: string): Promise<JsonResult> => {
     try {
-      return await fetchWithRetry(url, {
+      return await fetchJsonWithRetry(url, {
         headers,
         ...(deps.fetch ? { fetch: deps.fetch } : {}),
         ...(deps.sleep ? { sleep: deps.sleep } : {}),
       });
     } catch (error) {
       throw toVamError(error);
-    }
-  };
-
-  const readJson = async (response: Response): Promise<unknown> => {
-    try {
-      return (await response.json()) as unknown;
-    } catch {
-      throw new VamError('invalid_response', 'The V&A API returned invalid JSON');
     }
   };
 
@@ -106,16 +100,14 @@ export function createVamClient(deps: VamClientDeps = {}): VamClient {
     async searchDesigns({ q, page = 1 }) {
       const response = await request(buildSearchUrl({ q, page }));
       if (!response.ok) throw new VamError('upstream', 'The V&A API rejected the search', response.status);
-      const raw = await readJson(response);
-      return parse(() => mapSearchResponse(raw));
+      return parse(() => mapSearchResponse(response.body));
     },
 
     async getDesign(systemNumber) {
       const response = await request(buildObjectUrl(systemNumber));
       if (response.status === 404) throw new VamError('not_found', 'Design not found', 404);
       if (!response.ok) throw new VamError('upstream', 'The V&A API rejected the request', response.status);
-      const raw = await readJson(response);
-      const design = parse(() => mapObjectResponse(raw));
+      const design = parse(() => mapObjectResponse(response.body));
       if (design === null) throw new VamError('not_found', 'Design has no image', 404);
       return design;
     },

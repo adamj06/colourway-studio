@@ -20,7 +20,7 @@ export const searchResponseSchema = z.object({
     pages: z.number(),
     page: z.number(),
   }),
-  records: z.array(searchRecordSchema),
+  records: z.array(searchRecordSchema).max(100),
 });
 
 const textRef = z.object({ text: z.string().nullish() }).nullish();
@@ -44,7 +44,7 @@ export const objectResponseSchema = z.object({
       .array(z.object({ dimension: z.string().nullish(), value: z.string().nullish(), unit: z.string().nullish() }))
       .default([]),
     productionDates: z.array(z.object({ date: z.object({ text: z.string().nullish() }).nullish() })).default([]),
-    images: z.array(z.string()).default([]),
+    images: z.array(z.string()).max(500).default([]),
   }),
 });
 

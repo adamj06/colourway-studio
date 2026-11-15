@@ -54,7 +54,8 @@ describe('GET /api/vam/search', () => {
     cachedSearch.mockRejectedValue(new VamError('upstream', 'secret detail', 503));
     const res = await searchGET(new Request('http://localhost/api/vam/search'));
     expect(res.status).toBe(502);
-    expect(res.headers.get('cache-control')).toBe('no-store');
+    // Cached for seconds only, so a V&A outage can't turn every request into two upstream calls.
+    expect(res.headers.get('cache-control')).toBe('public, max-age=0, s-maxage=10');
     expect(JSON.stringify(await res.json())).not.toContain('secret detail');
   });
 });
@@ -80,6 +81,7 @@ describe('GET /api/vam/object/[systemNumber]', () => {
     cachedDesign.mockRejectedValue(new VamError('not_found', 'nope', 404));
     const res = await objectGET(new Request('http://localhost/x'), ctx('O99999999'));
     expect(res.status).toBe(404);
+    expect(res.headers.get('cache-control')).toBe('public, max-age=60, s-maxage=300');
     expect(await res.json()).toMatchObject({ error: { code: 'not_found' } });
   });
 });

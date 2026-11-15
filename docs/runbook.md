@@ -57,3 +57,6 @@ Only promote a previous **production** deployment. Security headers are computed
 - **Best-effort on Vercel:** `use cache` is an in-memory cache, and serverless instances don't share it, so the CDN headers are what actually persist between requests. There is deliberately no extra last-good store.
 - `/api/health` is dynamic (never prerendered, so builds never call the V&A). The version is read per request; the V&A reachability ping is cached for 60 s and the response is held by the CDN for 60 s. It answers 200 even when the V&A is unreachable.
 - To flush stale data after a bad upstream response, redeploy: the cache key includes the build id.
+- **Errors never cross the `use cache` boundary as exceptions** (they lose their class and every failure became a 500). The cached functions return an `Outcome` (`src/lib/vam/outcome.ts`) and `cachedClient` rethrows a real `VamError`, so the routes answer 404/502/504 correctly. If a design page shows "couldn't load" for a design that doesn't exist, check that first: `GET /api/vam/object/O99999999` must be a 404.
+- Stable answers (results, "not found") are cached for hours. Upstream failures are cached for 10 s (in-process) and 10 s at the CDN (`s-maxage=10`), 404s for 5 min at the CDN.
+- Upstream hardening: no redirects, JSON content-type only, 2 MB body cap, and the 5 s timeout includes the body.

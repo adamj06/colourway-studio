@@ -53,6 +53,8 @@ function Facts({ design }: { design: Design }) {
 function Loaded({ design }: { design: Design }) {
   return (
     <article>
+      {/* React 19 hoists <title> into <head>: each design gets its own page title (WCAG 2.4.2). */}
+      <title>{`${design.title} · Colourway Studio`}</title>
       <BackLink />
       <div className="mt-6 grid gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="flex aspect-[4/3] max-h-[80vh] items-center justify-center bg-mat">
@@ -69,8 +71,9 @@ function Loaded({ design }: { design: Design }) {
           <Facts design={design} />
           {design.description ? (
             <div className="mt-8 space-y-4 leading-relaxed whitespace-pre-line">
-              {design.description.split('\n\n').map((paragraph) => (
-                <p key={paragraph}>{paragraph}</p>
+              {design.description.split('\n\n').map((paragraph, index) => (
+                // Position in the key: a description can repeat a paragraph, and this list never reorders.
+                <p key={`${String(index)}:${paragraph.slice(0, 24)}`}>{paragraph}</p>
               ))}
             </div>
           ) : null}
@@ -90,6 +93,7 @@ function Loaded({ design }: { design: Design }) {
 function Problem({ title, children }: { title: string; children?: React.ReactNode }) {
   return (
     <div role="alert">
+      <title>{`${title} · Colourway Studio`}</title>
       <BackLink />
       <h1 className="mt-6 font-serif text-3xl">{title}</h1>
       <div className="mt-3 text-muted">{children}</div>
