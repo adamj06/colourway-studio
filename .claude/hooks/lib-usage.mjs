@@ -41,12 +41,16 @@ export function transcriptUsage(transcriptPath) {
   return { messages: [...byId.values()], last };
 }
 
-export function totalTokens(u) {
+/** Cache reads are billed at roughly a tenth of fresh input, so they count at that weight toward session limits. */
+export const CACHE_READ_WEIGHT = 0.1;
+
+/** Weighted tokens: input + output + cacheWrite + 0.1 x cacheRead. This is what the session limits measure. */
+export function weightedTokens(u) {
   return (
     (u.input_tokens ?? 0) +
     (u.output_tokens ?? 0) +
     (u.cache_creation_input_tokens ?? 0) +
-    (u.cache_read_input_tokens ?? 0)
+    CACHE_READ_WEIGHT * (u.cache_read_input_tokens ?? 0)
   );
 }
 
