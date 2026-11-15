@@ -33,17 +33,21 @@ Committing the kit as the very first commit is deliberate: the git history shows
 Start `claude` in the repo, then go through these in order:
 
 **Prompt 1: tooling setup (Sonnet is fine)**
+
 > Read CLAUDE.md and docs/quality-gates.md. Set up the tooling so every gate in the table is actually enforced: Vitest with the coverage thresholds, Playwright with @axe-core/playwright, StrykerJS (scoped to src/lib/colour, break threshold 80), typescript-eslint strict-type-checked plus jsx-a11y and the complexity rules, the tsconfig strict flags, size-limit, husky + lint-staged + commitlint (the config files already exist), zod, Prettier, and the npm scripts named in CLAUDE.md. Add security headers in next.config. No app features yet. Prove each gate works by briefly breaking it and showing it fail. Use /feature 001-tooling.
 
 That "prove each gate fails" step is worth screenshotting for the presentation.
 
 **Prompt 1b: production plumbing (same branch or the next one)**
+
 > Following the Production standards in CLAUDE.md: add src/env.ts (zod), the structured logger, root error.tsx and not-found.tsx, GET /api/health (commit SHA + V&A reachability), a test:contract script, and a @smoke-tagged Playwright test that honours BASE_URL and sends the x-vercel-protection-bypass header when VERCEL_AUTOMATION_BYPASS_SECRET is set. Pin every GitHub Action in .github/workflows to a full commit SHA with the version as a comment. Use /feature 001b-platform.
 
 **Prompt 2: the CORS spike (this decides ADR 0002)**
+
 > Use the api-scout subagent: find 3 William Morris wallpaper or textile objects with images via the V&A v2 API, save fixtures, and check whether framemark.vam.ac.uk image responses include Access-Control-Allow-Origin. Report back before we build anything.
 
 **Prompt 3 onwards: features, one per /feature run, with /clear in between**
+
 - `/feature 002-vam-browse Search and browse Morris designs via a cached proxy route`
 - `/feature 003-palette Extract a 4 to 8 colour palette in CIELAB using k-means in a Web Worker`
 - `/feature 004-recolour Recolour by palette swatch, preserving luminance texture`

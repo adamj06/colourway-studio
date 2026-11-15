@@ -22,11 +22,15 @@ const fmt = (n) => n.toLocaleString('en-GB');
 const where = 'Edit .claude/budget.json if this is deliberate.';
 
 if (priced && budget.dailyHardUsd && dayUsd >= budget.dailyHardUsd) {
-  process.stderr.write(`Budget guard: today's spend is about $${dayUsd.toFixed(2)}, over the hard limit of $${budget.dailyHardUsd}. ${where}`);
+  process.stderr.write(
+    `Budget guard: today's spend is about $${dayUsd.toFixed(2)}, over the hard limit of $${budget.dailyHardUsd}. ${where}`,
+  );
   process.exit(2);
 }
 if (budget.sessionHardTokens && sessionTokens >= budget.sessionHardTokens) {
-  process.stderr.write(`Budget guard: this session has used ${fmt(sessionTokens)} tokens, over the hard limit. Start a fresh session (/clear) or ${where}`);
+  process.stderr.write(
+    `Budget guard: this session has used ${fmt(sessionTokens)} tokens, over the hard limit. Start a fresh session (/clear) or ${where}`,
+  );
   process.exit(2);
 }
 
