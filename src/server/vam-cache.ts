@@ -1,7 +1,7 @@
 import { cacheLife } from 'next/cache';
 import { env } from '@/env';
-import { createVamClient, type VamClient } from '@/lib/vam/client';
-import { fromOutcome, isStable, toOutcome, type Outcome } from '@/lib/vam/outcome';
+import { createVamClient, VamError, type VamClient } from '@/lib/vam/client';
+import { cacheable, decodeFailure, fromCacheable, type Cacheable } from '@/lib/vam/outcome';
 import type { Design, SearchResult } from '@/lib/vam/types';
 
 // Next-specific caching around the pure V&A client (src/lib/vam stays free of framework imports).
@@ -10,30 +10,27 @@ import type { Design, SearchResult } from '@/lib/vam/types';
 // instances (node_modules/next/dist/docs/.../use-cache.md, "Runtime caching considerations"). The route handlers
 // therefore ALSO send Cache-Control headers so Vercel's CDN is the shared cache. Both are documented in the runbook.
 //
-// Cached functions never throw: an error crossing the cache boundary loses its class (it became a 500 for every
-// failure). They return an Outcome, and cachedClient turns it back into a VamError for the handlers.
+// Cache policy (see src/lib/vam/outcome.ts): only successes and genuine not-found answers are returned, and so
+// cached. Transient failures (5xx, timeout, network, bad body) THROW inside the cached function, so nothing is
+// stored and a failed revalidation can't overwrite a good entry. The thrown error carries its code in `digest`
+// (the class doesn't survive the boundary) and cachedClient rebuilds a VamError outside the cache.
 
 const version = env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? 'dev';
 const client = createVamClient({ userAgent: `colourway-studio/${version} (non-commercial case study)` });
 
-/** Stable answers (results, "not found") live for hours; failures only for seconds, so an outage can't pin an error. */
-function lifeFor(outcome: Outcome<unknown>): void {
-  if (isStable(outcome)) cacheLife('hours');
-  else cacheLife({ stale: 5, revalidate: 10, expire: 60 });
+export async function cachedSearch(q: string, page: number): Promise<Cacheable<SearchResult>> {
+  'use cache';
+  // The lifetime is set only after the work succeeded: a failure throws first and so is never given one.
+  const result = await cacheable(() => client.searchDesigns({ q, page }));
+  cacheLife('hours');
+  return result;
 }
 
-export async function cachedSearch(q: string, page: number): Promise<Outcome<SearchResult>> {
+export async function cachedDesign(systemNumber: string): Promise<Cacheable<Design>> {
   'use cache';
-  const outcome = await toOutcome(() => client.searchDesigns({ q, page }));
-  lifeFor(outcome);
-  return outcome;
-}
-
-export async function cachedDesign(systemNumber: string): Promise<Outcome<Design>> {
-  'use cache';
-  const outcome = await toOutcome(() => client.getDesign(systemNumber));
-  lifeFor(outcome);
-  return outcome;
+  const result = await cacheable(() => client.getDesign(systemNumber));
+  cacheLife('hours');
+  return result;
 }
 
 export async function cachedPing() {
@@ -46,6 +43,23 @@ export async function cachedPing() {
 
 /** The cached V&A client the route handlers use. Same interface as the pure client, so handlers are unchanged. */
 export const cachedClient: Pick<VamClient, 'searchDesigns' | 'getDesign'> = {
-  searchDesigns: async ({ q, page }) => fromOutcome(await cachedSearch(q ?? '', page ?? 1)),
-  getDesign: async (systemNumber) => fromOutcome(await cachedDesign(systemNumber)),
+  searchDesigns: async ({ q, page }) => {
+    try {
+      return fromCacheable(await cachedSearch(q ?? '', page ?? 1));
+    } catch (error) {
+      throw asVamError(error);
+    }
+  },
+  getDesign: async (systemNumber) => {
+    try {
+      return fromCacheable(await cachedDesign(systemNumber));
+    } catch (error) {
+      throw asVamError(error);
+    }
+  },
 };
+
+/** A VamError from fromCacheable (not found) passes through; anything from the cache boundary is decoded. */
+function asVamError(error: unknown): VamError {
+  return error instanceof VamError ? error : decodeFailure(error);
+}

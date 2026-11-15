@@ -155,6 +155,27 @@ describe('handleObject', () => {
       logger: fakeLogger(),
     });
     expect(out.status).toBe(504);
+    expect(out.body).toMatchObject({ error: { code: 'timeout' } });
+  });
+
+  it.each(['upstream', 'invalid_response'] as const)('returns typed 502 JSON for a %s failure', async (code) => {
+    const out = await handleObject('O78207', {
+      client: { getDesign: vi.fn().mockRejectedValue(new VamError(code, 'sk-secret', 503)) },
+      logger: fakeLogger(),
+    });
+    expect(out.status).toBe(502);
+    expect(out.body).toMatchObject({ error: { code } });
+    expect(JSON.stringify(out.body)).not.toContain('sk-secret');
+  });
+
+  it('maps an error rebuilt from a cache digest to the same status as the original', async () => {
+    const { decodeFailure } = await import('../vam/outcome');
+    const rebuilt = decodeFailure({ digest: 'vam:timeout:-' });
+    const out = await handleObject('O78207', {
+      client: { getDesign: vi.fn().mockRejectedValue(rebuilt) },
+      logger: fakeLogger(),
+    });
+    expect(out.status).toBe(504);
   });
 });
 

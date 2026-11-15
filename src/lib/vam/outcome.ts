@@ -1,31 +1,56 @@
 import { VamError, type VamErrorCode } from './client';
 
-// A `use cache` function can't signal failure by throwing: an error that crosses the cache boundary is serialised
-// and comes back as a plain Error (the class, code and status are lost, so everything became a 500). Cached
-// functions therefore return an Outcome, and the caller turns it back into a thrown VamError.
+// Cache policy for `use cache` functions: cache successes and genuine not-found answers ONLY.
+//
+// A transient failure (5xx, timeout, network, bad body) must never become a cached value, or a failed revalidation
+// would overwrite a good entry and defeat serve-stale. So those THROW inside the cached function: nothing is stored
+// and the previous entry survives.
+//
+// An error's class does not survive the `use cache` boundary (it comes back as a plain Error, and in production
+// the message is redacted), but `error.digest` does: Next keeps an existing digest when it serialises the error.
+// The failure code is therefore encoded in the digest and decoded outside the cache into a real VamError.
 
-export type Outcome<T> = { ok: true; value: T } | { ok: false; code: VamErrorCode; upstreamStatus?: number };
+export type Cacheable<T> = { ok: true; value: T } | { ok: false; code: 'not_found'; upstreamStatus?: number };
 
-export async function toOutcome<T>(work: () => Promise<T>): Promise<Outcome<T>> {
+const DIGEST_PREFIX = 'vam:';
+const CODES: readonly VamErrorCode[] = ['invalid_input', 'not_found', 'upstream', 'timeout', 'invalid_response'];
+
+/** An Error whose digest carries the failure code and upstream status. The message is fixed text. */
+export function encodeFailure(error: unknown): Error {
+  const code: VamErrorCode = error instanceof VamError ? error.code : 'upstream';
+  const status = error instanceof VamError ? error.upstreamStatus : undefined;
+  const encoded = new Error(`V&A request failed: ${code}`);
+  return Object.assign(encoded, { digest: `${DIGEST_PREFIX}${code}:${status === undefined ? '-' : String(status)}` });
+}
+
+/** Rebuilds a VamError from whatever came out of the cache boundary. Never throws; unknown shapes are `upstream`. */
+export function decodeFailure(error: unknown): VamError {
+  const digest = typeof error === 'object' && error !== null && 'digest' in error ? error.digest : undefined;
+  const match = typeof digest === 'string' ? /^vam:([a-z_]+):(\d{3}|-)$/.exec(digest) : null;
+  const code = CODES.find((c) => c === match?.[1]);
+  if (!match || !code) return new VamError('upstream', 'V&A request failed: upstream');
+  const status = match[2] === '-' ? undefined : Number(match[2]);
+  return new VamError(code, `V&A request failed: ${code}`, status);
+}
+
+/** Resolves a value or a not-found answer (both safe to cache). Every other failure throws an encoded error. */
+export async function cacheable<T>(work: () => Promise<T>): Promise<Cacheable<T>> {
   try {
     return { ok: true, value: await work() };
   } catch (error) {
-    if (error instanceof VamError) {
+    if (error instanceof VamError && error.code === 'not_found') {
       return {
         ok: false,
-        code: error.code,
+        code: 'not_found',
         ...(error.upstreamStatus === undefined ? {} : { upstreamStatus: error.upstreamStatus }),
       };
     }
-    return { ok: false, code: 'upstream' };
+    throw encodeFailure(error);
   }
 }
 
-/** The value, or a thrown VamError rebuilt from the outcome. Messages are fixed: the original text isn't carried. */
-export function fromOutcome<T>(outcome: Outcome<T>): T {
-  if (outcome.ok) return outcome.value;
-  throw new VamError(outcome.code, `V&A request failed: ${outcome.code}`, outcome.upstreamStatus);
+/** The value, or a thrown not_found VamError. */
+export function fromCacheable<T>(result: Cacheable<T>): T {
+  if (result.ok) return result.value;
+  throw new VamError('not_found', 'V&A request failed: not_found', result.upstreamStatus);
 }
-
-/** Answers that won't change soon (a result, or a design that doesn't exist) are cached long; failures only briefly. */
-export const isStable = (outcome: Outcome<unknown>): boolean => outcome.ok || outcome.code === 'not_found';
