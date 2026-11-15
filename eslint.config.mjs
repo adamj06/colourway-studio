@@ -59,6 +59,28 @@ const eslintConfig = defineConfig([
           message: 'Read environment variables through src/env.ts (zod-validated), never process.env directly.',
         },
       ],
+      // The same ban for the forms the rule above can't see: importing env from node:process, an aliased
+      // process object, and globalThis.process.env. (Destructuring `const { env } = process` is caught below.)
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: ['node:process', 'process'].map((name) => ({
+            name,
+            message: 'Read environment variables through src/env.ts (zod-validated), never via node:process.',
+          })),
+        },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "MemberExpression[property.name='env'][object.property.name='process']",
+          message: 'Read environment variables through src/env.ts (zod-validated), never process.env directly.',
+        },
+        {
+          selector: "VariableDeclarator[init.name='process'][id.type='ObjectPattern']",
+          message: 'Do not destructure process; read environment variables through src/env.ts.',
+        },
+      ],
     },
   },
 

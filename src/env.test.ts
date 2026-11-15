@@ -21,8 +21,12 @@ describe('parseEnv', () => {
     expect(parseEnv({ NODE_ENV: 'test', VERCEL_GIT_COMMIT_SHA: 'abc123' }).VERCEL_GIT_COMMIT_SHA).toBe('abc123');
   });
 
-  it('defaults NODE_ENV to development when unset', () => {
-    expect(parseEnv({}).NODE_ENV).toBe('development');
+  it('defaults NODE_ENV to production when unset (fails closed)', () => {
+    expect(parseEnv({}).NODE_ENV).toBe('production');
+  });
+
+  it('names (root) when the input is not an object at all', () => {
+    expect(() => parseEnv(null as never)).toThrow(/\(root\)/);
   });
 
   it('rejects an invalid VERCEL_ENV with a readable message naming the variable', () => {
@@ -62,9 +66,8 @@ describe('parseEnv', () => {
 });
 
 describe('env', () => {
-  it('is defined at import and has a NODE_ENV', async () => {
+  it('is parsed from process.env at import (Vitest runs with NODE_ENV=test)', async () => {
     const mod = await import('./env');
-    expect(mod.env).toBeDefined();
-    expect(mod.env.NODE_ENV).toBeTruthy();
+    expect(mod.env.NODE_ENV).toBe('test');
   });
 });

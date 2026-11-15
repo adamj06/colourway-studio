@@ -1,7 +1,8 @@
 import { z } from 'zod';
 
 const schema = z.object({
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  // Fails closed: an unset NODE_ENV is treated as production, so it can never ship the development CSP (unsafe-eval).
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('production'),
   // Set by Vercel. Absent locally, which is how local `next start` is told apart from a real deploy.
   VERCEL_ENV: z.enum(['production', 'preview', 'development']).optional(),
   VERCEL_GIT_COMMIT_SHA: z.string().min(1).optional(),
