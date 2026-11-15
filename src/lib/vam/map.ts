@@ -16,8 +16,9 @@ const untitled = (objectType: string | null): string => (objectType ? `Untitled 
 const NAMED_ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
 
 function decodeEntity(match: string, body: string): string {
-  const named = NAMED_ENTITIES[body.toLowerCase()];
-  if (named !== undefined) return named;
+  const name = body.toLowerCase();
+  // hasOwn, not a bare lookup: "&constructor;" must not resolve to Object.prototype.constructor.
+  if (Object.hasOwn(NAMED_ENTITIES, name)) return NAMED_ENTITIES[name] ?? match;
   const isHex = body[1] === 'x' || body[1] === 'X';
   const code = Number.parseInt(body.slice(isHex ? 2 : 1), isHex ? 16 : 10);
   return code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : match;

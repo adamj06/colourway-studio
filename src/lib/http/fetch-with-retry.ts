@@ -46,8 +46,9 @@ async function attempt(url: string, init: FetchWithRetryInit): Promise<Attempt> 
       return { error: new UpstreamError('http', response.status) };
     }
     return { response };
-  } catch {
-    return { error: new UpstreamError(controller.signal.aborted ? 'timeout' : 'network') };
+  } catch (error) {
+    const aborted = controller.signal.aborted || (error instanceof DOMException && error.name === 'AbortError');
+    return { error: new UpstreamError(aborted ? 'timeout' : 'network') };
   } finally {
     clearTimeout(timer);
   }
