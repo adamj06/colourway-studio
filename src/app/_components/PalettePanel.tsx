@@ -52,9 +52,6 @@ function SwatchButton(props: { swatch: Swatch; index: number; total: number; onC
       <span aria-hidden="true" className="font-mono text-sm">
         {swatch.hex}
       </span>
-      <span aria-hidden="true" className="text-xs text-muted">
-        {formatShare(swatch.share)} · Copy
-      </span>
     </button>
   );
 }
@@ -105,10 +102,17 @@ export function PalettePanel({ palette }: { palette: PaletteView }) {
           </button>
         </p>
       ) : null}
+      {palette.swatches.length > 0 ? (
+        <p className="mt-2 text-sm text-muted">Select a swatch to copy its hex code.</p>
+      ) : null}
       <ul className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3" aria-busy={palette.status === 'loading'}>
         {palette.swatches.map((swatch, index) => (
           <li key={swatch.hex}>
             <SwatchButton swatch={swatch} index={index} total={palette.swatches.length} onCopy={copy} />
+            {/* Outside the button on purpose: its visible text must be part of its accessible name (WCAG 2.5.3). */}
+            <p aria-hidden="true" className="mt-1 text-xs text-muted">
+              {formatShare(swatch.share)} of the design
+            </p>
           </li>
         ))}
       </ul>
