@@ -1,19 +1,23 @@
 name: Claude PR review
 
 # Second-opinion review on every PR, from a fresh context with no knowledge of how the code was written.
-# Auth: run `claude setup-token` locally and save it as the CLAUDE_CODE_OAUTH_TOKEN repo secret
-# (uses your subscription), or use an ANTHROPIC_API_KEY secret instead. Check the action's README for current inputs.
+# Setup:
+#   1. Install the Claude GitHub App on this repo: https://github.com/apps/claude
+#   2. Run `claude setup-token` locally and save the result as the CLAUDE_CODE_OAUTH_TOKEN repo secret.
+# The action exchanges a GitHub OIDC token for an app token, which is why id-token: write is required.
+# Dependabot runs never receive repo secrets, so they're skipped.
 on:
   pull_request:
-    types: [opened, ready_for_review]
+    types: [opened, synchronize, ready_for_review]
 
 permissions:
   contents: read
   pull-requests: write
+  id-token: write
 
 jobs:
   review:
-    if: github.event.pull_request.draft == false
+    if: github.event.pull_request.draft == false && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
