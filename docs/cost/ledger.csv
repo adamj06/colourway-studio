@@ -1,0 +1,3 @@
+timestamp,session_id,branch,model,input,output,cache_write,cache_read,est_usd
+2026-11-15T13:55:38.460Z,2d24fc97-2253-4723-8b42-c0d5b371d1cf,feat/001-tooling,claude-opus-5-5,64,30097,123599,1745920,1.5694
+2026-11-15T13:55:38.460Z,2d24fc97-2253-4723-8b42-c0d5b371d1cf,feat/001-tooling,claude-sonnet-5-5,168,88364,219191,9606892,3.3533

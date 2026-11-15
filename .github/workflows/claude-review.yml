@@ -19,11 +19,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: anthropics/claude-code-action@v1
+      - uses: anthropics/claude-code-action@f3b070c88125d33dbae5653df5f143101d4ea9dc # v1.0.276
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
             Review this PR against CLAUDE.md. Focus on correctness, test quality (would the tests catch a broken implementation?),
             security of the V&A proxy (SSRF, validation) and XSS. Post one concise review comment with Must fix / Should fix items
             and file:line references. Don't suggest style nits that the linter already covers.
-          claude_args: "--model sonnet --max-turns 15"
+          claude_args: '--model sonnet --max-turns 15'

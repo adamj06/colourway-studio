@@ -28,7 +28,11 @@ for (const f of files) {
   for (const line of readFileSync(f, 'utf8').split('\n')) {
     if (!line.trim()) continue;
     let e;
-    try { e = JSON.parse(line); } catch { continue; }
+    try {
+      e = JSON.parse(line);
+    } catch {
+      continue;
+    }
     const m = e.message;
     if (e.type !== 'assistant' || !m?.usage || !m.model) continue;
     byId.set(m.id ?? `${f}:${byId.size}`, { model: m.model, u: m.usage });
@@ -59,9 +63,16 @@ const ts = new Date().toISOString();
 for (const [model, t] of Object.entries(totals)) {
   const key = Object.keys(pricing).find((k) => model.includes(k));
   const p = key ? pricing[key] : null;
-  const est = p && p.input != null
-    ? ((t.input * p.input + t.output * p.output + t.cacheWrite * p.cacheWrite + t.cacheRead * p.cacheRead) / 1e6).toFixed(4)
-    : '';
-  appendFileSync(ledger, `${ts},${input.session_id ?? ''},${branch},${model},${t.input},${t.output},${t.cacheWrite},${t.cacheRead},${est}\n`);
+  const est =
+    p && p.input != null
+      ? (
+          (t.input * p.input + t.output * p.output + t.cacheWrite * p.cacheWrite + t.cacheRead * p.cacheRead) /
+          1e6
+        ).toFixed(4)
+      : '';
+  appendFileSync(
+    ledger,
+    `${ts},${input.session_id ?? ''},${branch},${model},${t.input},${t.output},${t.cacheWrite},${t.cacheRead},${est}\n`,
+  );
 }
 process.exit(0);

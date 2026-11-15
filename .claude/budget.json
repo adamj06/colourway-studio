@@ -1,5 +1,5 @@
 {
-  "_note": "Spend guardrails, read by .claude/hooks/budget.mjs on every prompt. USD figures need pricing.json filled in; token figures always apply. Raise these deliberately, not by habit.",
+  "_note": "Spend guardrails, read by .claude/hooks/budget.mjs on every prompt. Session token limits count WEIGHTED tokens: input + output + cacheWrite + 0.1 x cacheRead, because cache reads are billed at about a tenth of fresh input (counting them in full tripped the old 10M limit on a mostly-cached session). USD figures need pricing.json filled in. Only Adam raises these limits, deliberately, not by habit.",
   "dailySoftUsd": 15,
   "dailyHardUsd": 30,
   "sessionSoftTokens": 4000000,

@@ -24,6 +24,8 @@ jobs:
       - run: npm ci
       - name: Guardrail tests (the hooks are code too)
         run: node --test ".claude/hooks/tests/*.test.mjs"
+      - name: Formatting (Prettier)
+        run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
       - name: Unit tests (coverage thresholds enforced in vitest config)
@@ -44,6 +46,8 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      # Uploaded on every run, so this job must NEVER receive VERCEL_AUTOMATION_BYPASS_SECRET (reports can echo
+      # request details). The secret is only passed to smoke.yml, which uploads nothing.
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -58,7 +62,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Secret scan
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/setup-node@v4

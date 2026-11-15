@@ -4,16 +4,24 @@
 - **Date:** 2026-11-15
 
 ## Context
+
 Palette extraction and recolouring are pixel-heavy. Running them server-side on Vercel functions would cost execution time, add latency per change, and risk the free tier limits.
 
 ## Options considered
+
 1. **Server-side (sharp in a route handler)**: one round trip per change, slow interactive recolouring, burns function time.
 2. **Client-side canvas + Web Worker**: instant feedback, zero server cost, scales with users for free. Needs the image to be readable by canvas (CORS).
 
 ## Decision
+
 Client-side. k-means palette extraction in CIELAB runs in a Web Worker, and recolouring is applied to canvas ImageData.
 
 ## Consequences
+
 - Needs `Access-Control-Allow-Origin` on images from framemark.vam.ac.uk. If that header is missing, images are served through our own proxy route with caching (spike 1 decides).
 - The colour maths lives in pure functions, which are easy to unit and mutation test.
 - Large images are downscaled for analysis; full resolution is used only for export.
+
+## TODO
+
+- **Finalise the Content-Security-Policy after the CORS spike.** The CSP currently allows `img-src 'self' blob: data: https://framemark.vam.ac.uk` (see `src/config/security-headers.ts`), because the spike hasn't run and we don't yet know whether images load directly or through a proxy route. If the spike decides on the proxy, drop `https://framemark.vam.ac.uk` from `img-src`. If images load directly, check whether `connect-src` also needs the host, and keep `crossOrigin="anonymous"` so the canvas stays untainted.
