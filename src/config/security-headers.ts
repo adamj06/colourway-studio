@@ -5,7 +5,8 @@ export type SecurityHeaderInput = {
 
 export type SecurityHeader = { key: string; value: string };
 
-// TODO(ADR 0002): finalise img-src after the CORS spike decides how V&A images load.
+// Final (ADR 0002): framemark sends Access-Control-Allow-Origin: *, so V&A images load directly via <img
+// crossOrigin="anonymous">. connect-src stays 'self' because images are never fetched with fetch/XHR.
 const IMG_SRC = "img-src 'self' blob: data: https://framemark.vam.ac.uk";
 
 function contentSecurityPolicy({ vercelEnv, nodeEnv }: SecurityHeaderInput): string {

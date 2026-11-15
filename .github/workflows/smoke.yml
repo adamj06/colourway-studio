@@ -23,6 +23,8 @@ jobs:
       - name: Smoke tests against the deployment
         env:
           BASE_URL: ${{ github.event.deployment_status.environment_url }}
+          # Includes the @external canvas test against the real framemark server (excluded from the PR e2e job).
+          RUN_EXTERNAL: '1'
           # "Production" or "Preview": on production the header test also asserts HSTS and upgrade-insecure-requests.
           DEPLOY_ENV: ${{ github.event.deployment_status.environment }}
           # The bypass secret is only ever sent to https://*.vercel.app or a host listed here (tests/e2e/trusted-origin.ts).
@@ -35,4 +37,4 @@ jobs:
             echo "::error::The deployment event has no environment_url, so there is nothing to smoke test."
             exit 1
           fi
-          npx playwright test --grep @smoke
+          npx playwright test --grep "@smoke|@external"

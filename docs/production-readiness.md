@@ -4,7 +4,7 @@ This is a small public demo. The bar is "production-quality engineering, proport
 
 ## In
 
-Strict types, enforced quality gates (coverage, mutation score, complexity, a11y, bundle size), tests at three levels plus smoke tests on every live deployment, a daily contract workflow for the real API (wired up, but the contract tests themselves are planned for feature 002 and the job passes vacuously until then), security scanning (gitleaks, Semgrep, CodeQL, npm audit, Dependabot), a design-time threat model, upstream resilience (timeouts, retry, stale cache), structured logging, a health endpoint, a runbook with rollback, and an agent workflow with tested guardrails and independent review.
+Strict types, enforced quality gates (coverage, mutation score, complexity, a11y, bundle size), tests at three levels plus smoke tests on every live deployment, a daily contract workflow that validates the real V&A API against the zod schemas and checks a real framemark image can be read from a canvas (active since feature 002), security scanning (gitleaks, Semgrep, CodeQL, npm audit, Dependabot), a design-time threat model, upstream resilience (timeouts, retry, stale cache), structured logging, a health endpoint, a runbook with rollback, and an agent workflow with tested guardrails and independent review.
 
 ## Deliberately out, and what would trigger adding it
 

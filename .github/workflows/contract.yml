@@ -22,6 +22,12 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:contract
+      - name: Real framemark image is readable from a canvas (@external)
+        env:
+          RUN_EXTERNAL: '1'
+        run: |
+          npx playwright install --with-deps chromium
+          npx playwright test --grep @external
       - name: Open an issue on drift
         if: failure()
         env:
