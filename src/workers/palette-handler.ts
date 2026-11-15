@@ -1,6 +1,6 @@
 // The logic of the palette worker, free of worker globals so it can be unit tested in node.
 // palette.worker.ts is a thin wrapper that feeds it messages.
-import { extractPaletteFromSamples } from '../lib/colour/palette';
+import { extractPaletteSteps } from '../lib/colour/palette';
 import { sampleLabPixels } from '../lib/colour/sample';
 import { requestSchema, type PaletteRequest, type PaletteResponse } from './palette-protocol';
 
@@ -13,9 +13,19 @@ export type PaletteHandler = {
   handle(request: unknown, post: (response: PaletteResponse) => void): Promise<void>;
 };
 
+/**
+ * Yields to the event loop for one task, so a message already waiting (a newer k) is delivered before the next
+ * k-means iteration. A MessageChannel is used instead of setTimeout(0): timers are clamped (4 ms once nested, and
+ * coarser still on some platforms), which added up to 20 clamped waits to every run.
+ */
 const macrotask = (): Promise<void> =>
   new Promise((resolve) => {
-    setTimeout(resolve, 0);
+    const { port1, port2 } = new MessageChannel();
+    port1.onmessage = () => {
+      port1.close();
+      resolve();
+    };
+    port2.postMessage(null);
   });
 
 function idOf(request: unknown): number | null {
@@ -40,7 +50,15 @@ export function createPaletteHandler(deps: PaletteHandlerDeps = {}): PaletteHand
     }
     await yieldTick();
     if (isStale()) return;
-    const swatches = extractPaletteFromSamples(samples, { k: request.k, shouldStop: isStale });
+    // One k-means iteration per step. Yielding between steps lets a newer message arrive; shouldStop then abandons
+    // this run at the start of its next iteration, so a superseded run costs at most one more iteration.
+    const steps = extractPaletteSteps(samples, { k: request.k, shouldStop: isStale });
+    let step = steps.next();
+    while (step.done !== true) {
+      await yieldTick();
+      step = steps.next();
+    }
+    const swatches = step.value;
     if (swatches === null || isStale()) return;
     post({ type: 'palette', id: request.id, k: request.k, swatches: swatches.map((s) => ({ ...s, lab: [...s.lab] })) });
   }

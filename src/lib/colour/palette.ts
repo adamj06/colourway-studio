@@ -1,6 +1,6 @@
 import { at } from './at';
 import { labToRgb, rgbToHex } from './convert';
-import { kmeansLab, kmeansLabToEnd, type KmeansResult } from './kmeans';
+import { kmeansLabSteps, kmeansLabToEnd, type KmeansResult } from './kmeans';
 import { mergeClusters, type Cluster } from './merge';
 import { mulberry32 } from './prng';
 import { sampleLabPixels } from './sample';
@@ -35,12 +35,26 @@ function paletteOf(result: KmeansResult): Swatch[] {
   return toSwatches(mergeClusters(clustersOf(result.centroids, result.counts), MERGE_DELTA_E));
 }
 
-/** Palette from already-sampled Lab values. Returns null when `shouldStop` abandons the run. */
-export function extractPaletteFromSamples(samples: Float64Array, options: SamplePaletteOptions): Swatch[] | null {
+/**
+ * Palette from already-sampled Lab values, one k-means iteration per step (see `kmeansLabSteps`). Lazy: an invalid k
+ * throws on the first `next()`. Returns null when `shouldStop` abandons the run.
+ */
+export function* extractPaletteSteps(
+  samples: Float64Array,
+  options: SamplePaletteOptions,
+): Generator<void, Swatch[] | null, void> {
   const { k, seed = DEFAULT_SEED, shouldStop } = options;
   assertValidK(k);
-  const result = kmeansLab(samples, k, mulberry32(seed), shouldStop ? { shouldStop } : {});
+  const result = yield* kmeansLabSteps(samples, k, mulberry32(seed), shouldStop ? { shouldStop } : {});
   return result === null ? null : paletteOf(result);
+}
+
+/** Palette from already-sampled Lab values, in one go. Returns null when `shouldStop` abandons the run. */
+export function extractPaletteFromSamples(samples: Float64Array, options: SamplePaletteOptions): Swatch[] | null {
+  const run = extractPaletteSteps(samples, options);
+  let step = run.next();
+  while (step.done !== true) step = run.next();
+  return step.value;
 }
 
 export function extractPalette(pixels: PixelBuffer, options: PaletteOptions): Swatch[] {

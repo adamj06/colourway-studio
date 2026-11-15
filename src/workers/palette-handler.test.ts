@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { bands, checkerboard, solidImage } from '../../tests/helpers/colour';
+import { bands, buildImage, checkerboard, solidImage } from '../../tests/helpers/colour';
+import { extractPalette } from '../lib/colour/palette';
+import { mulberry32 } from '../lib/colour/prng';
 import type { PixelBuffer } from '../lib/colour/types';
 import { createPaletteHandler } from './palette-handler';
 import type { PaletteResponse } from './palette-protocol';
@@ -287,5 +289,106 @@ describe('palette handler: failures', () => {
     await handler.handle(null, post);
     await handler.handle(analyseRequest(8, 4, checkerboard(RED, BLUE, 4)), post);
     expect(paletteOf(posted[1]).id).toBe(8);
+  });
+});
+
+/** A yieldTick that holds every pending tick until the test releases them one at a time or all at once. */
+function manualTicks() {
+  const waiting: (() => void)[] = [];
+  let open = false;
+  let calls = 0;
+  return {
+    yieldTick: (): Promise<void> => {
+      calls += 1;
+      if (open) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        waiting.push(resolve);
+      });
+    },
+    pending: (): number => waiting.length,
+    releaseOldest: (): void => {
+      waiting.shift()?.();
+    },
+    releaseAll: (): void => {
+      open = true;
+      waiting.splice(0).forEach((resolve) => {
+        resolve();
+      });
+    },
+    calls: (): number => calls,
+  };
+}
+
+function noisyImage(): PixelBuffer {
+  const rng = mulberry32(21);
+  return buildImage(24, 24, () => ({
+    rgb: [Math.floor(rng() * 256), Math.floor(rng() * 256), Math.floor(rng() * 256)],
+  }));
+}
+
+describe('palette handler: cancellation between iterations', () => {
+  it('yields to the event loop more than once during a multi-iteration run', async () => {
+    const tick = controlledTick();
+    tick.release();
+    const { posted, post } = recorder();
+    await createPaletteHandler({ yieldTick: tick.yieldTick }).handle(analyseRequest(1, 6, noisyImage()), post);
+    expect(tick.calls()).toBeGreaterThan(1);
+    expect(posted).toHaveLength(1);
+  });
+
+  it('stops a run superseded while waiting on an iteration tick and posts only the newer palette', async () => {
+    const ticks = manualTicks();
+    const { posted, post } = recorder();
+    const handler = createPaletteHandler({ yieldTick: ticks.yieldTick });
+    const first = handler.handle(analyseRequest(1, 6, noisyImage()), post);
+    await flushMacrotask();
+    expect(ticks.calls()).toBe(1);
+    // Release the initial tick: the first run does one iteration, then waits on an iteration tick.
+    ticks.releaseOldest();
+    await flushMacrotask();
+    expect(ticks.calls()).toBe(2);
+    expect(ticks.pending()).toBe(1);
+
+    // k must be 4 to 8 (requestSchema): an out-of-range k would be rejected before it ever asked for a tick.
+    const second = handler.handle({ type: 'set-k', id: 2, k: 4 }, post);
+    expect(ticks.calls()).toBe(3);
+    // Release only the first run's tick. It must notice it was superseded and ask for no further tick.
+    ticks.releaseOldest();
+    await flushMacrotask();
+    expect(ticks.calls()).toBe(3);
+    expect(posted).toEqual([]);
+
+    ticks.releaseAll();
+    await Promise.all([first, second]);
+    expect(posted).toHaveLength(1);
+    expect(paletteOf(posted[0]).id).toBe(2);
+    expect(paletteOf(posted[0]).k).toBe(4);
+  });
+
+  it('stops a superseded run that was waiting on its very first tick without posting for it', async () => {
+    const ticks = manualTicks();
+    const { posted, post } = recorder();
+    const handler = createPaletteHandler({ yieldTick: ticks.yieldTick });
+    const first = handler.handle(analyseRequest(1, 6, noisyImage()), post);
+    await flushMacrotask();
+    expect(ticks.calls()).toBe(1);
+    const second = handler.handle(analyseRequest(2, 4, checkerboard(RED, BLUE, 4)), post);
+    expect(ticks.calls()).toBe(2);
+    ticks.releaseOldest();
+    await flushMacrotask();
+    expect(ticks.calls()).toBe(2);
+    expect(posted).toEqual([]);
+
+    ticks.releaseAll();
+    await Promise.all([first, second]);
+    expect(posted.map((r) => (r.type === 'palette' ? r.id : -1))).toEqual([2]);
+  });
+
+  it('posts the same palette as extractPalette for a multi-iteration run', async () => {
+    const image = noisyImage();
+    const { posted, post } = recorder();
+    await createPaletteHandler(immediate()).handle(analyseRequest(1, 6, image), post);
+    const expected = extractPalette(image, { k: 6 });
+    expect(paletteOf(posted[0]).swatches).toEqual(expected.map((s) => ({ ...s, lab: [...s.lab] })));
   });
 });

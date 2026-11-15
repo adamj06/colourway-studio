@@ -122,12 +122,17 @@ function dropEmpty(centres: Float64Array, counts: number[]): { centroids: Float6
   return { centroids, counts: kept.map((c) => at(counts, c)) };
 }
 
-export function kmeansLab(
+/**
+ * One Lloyd iteration per step. After every iteration except the last it yields, so a caller (the worker) can let the
+ * event loop deliver newer messages and decide to stop. `shouldStop` is checked before every iteration, including
+ * right after resuming from a yield; when it returns true the run is abandoned and the result is null.
+ */
+export function* kmeansLabSteps(
   samples: Float64Array,
   k: number,
   rng: () => number,
   options: KmeansOptions = {},
-): KmeansResult | null {
+): Generator<void, KmeansResult | null, void> {
   const n = samples.length / 3;
   if (n === 0) return { centroids: new Float64Array(0), counts: [], iterations: 0 };
 
@@ -142,8 +147,22 @@ export function kmeansLab(
     counts = updateCentres(samples, assignments, centres);
     iterations++;
     if (!changed) break;
+    if (iterations < maxIterations) yield;
   }
   return { ...dropEmpty(centres, counts), iterations };
+}
+
+/** Runs the steps to the end in one go. */
+export function kmeansLab(
+  samples: Float64Array,
+  k: number,
+  rng: () => number,
+  options: KmeansOptions = {},
+): KmeansResult | null {
+  const run = kmeansLabSteps(samples, k, rng, options);
+  let step = run.next();
+  while (step.done !== true) step = run.next();
+  return step.value;
 }
 
 /** For runs that can't be abandoned (no `shouldStop`): the result is never null. */
