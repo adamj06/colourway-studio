@@ -1,3 +1,4 @@
+import type { SyntheticEvent } from 'react';
 import { iiifImageUrl } from '@/lib/vam/iiif';
 
 type Props = {
@@ -7,6 +8,7 @@ type Props = {
   alt: string;
   priority?: boolean;
   className?: string;
+  onLoad?: (event: SyntheticEvent<HTMLImageElement>) => void;
 };
 
 /**
@@ -14,9 +16,10 @@ type Props = {
  * would only burn quota. crossOrigin is ALWAYS set so a cached non-CORS copy can never taint a canvas later
  * (framemark sends Access-Control-Allow-Origin: *, spike result in ADR 0002).
  */
-export function DesignImage({ imageBaseUrl, size, alt, priority = false, className }: Props) {
+export function DesignImage({ imageBaseUrl, size, alt, priority = false, className, onLoad }: Props) {
   return (
     <img
+      onLoad={onLoad}
       src={iiifImageUrl(imageBaseUrl, size, size)}
       alt={alt}
       width={size}

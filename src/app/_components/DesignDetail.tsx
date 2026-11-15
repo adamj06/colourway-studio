@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { isDesign } from '@/lib/vam/guards';
 import type { Design } from '@/lib/vam/types';
 import { DesignImage } from './DesignImage';
+import { PalettePanel } from './PalettePanel';
+import { usePalette } from './usePalette';
 
 type Result = { key: string; outcome: { design: Design } | { error: 'not_found' | 'failed' } };
 
@@ -51,20 +53,27 @@ function Facts({ design }: { design: Design }) {
 }
 
 function Loaded({ design }: { design: Design }) {
+  const palette = usePalette();
   return (
     <article>
       {/* React 19 hoists <title> into <head>: each design gets its own page title (WCAG 2.4.2). */}
       <title>{`${design.title} · Colourway Studio`}</title>
       <BackLink />
       <div className="mt-6 grid gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div className="flex aspect-[4/3] max-h-[80vh] items-center justify-center bg-mat">
-          <DesignImage
-            imageBaseUrl={design.imageBaseUrl}
-            size={1600}
-            alt={`${design.title}${design.objectType ? `, ${design.objectType.toLowerCase()}` : ''}`}
-            priority
-            className="max-h-full max-w-full object-contain"
-          />
+        <div>
+          <div className="flex aspect-[4/3] max-h-[80vh] items-center justify-center bg-mat">
+            <DesignImage
+              imageBaseUrl={design.imageBaseUrl}
+              size={1600}
+              alt={`${design.title}${design.objectType ? `, ${design.objectType.toLowerCase()}` : ''}`}
+              priority
+              className="max-h-full max-w-full object-contain"
+              onLoad={(event) => {
+                palette.onImage(event.currentTarget);
+              }}
+            />
+          </div>
+          <PalettePanel palette={palette} />
         </div>
         <div>
           <h1 className="font-serif text-4xl leading-tight">{design.title}</h1>
