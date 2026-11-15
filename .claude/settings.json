@@ -28,7 +28,22 @@
       "Bash(git push:*)",
       "Bash(gh pr create:*)",
       "Bash(npm install:*)",
-      "Bash(npm i:*)"
+      "Bash(npm i:*)",
+      "Edit(./.claude/settings.json)",
+      "Edit(./.claude/settings.local.json)",
+      "Edit(./.claude/hooks/**)",
+      "Edit(./.claude/agents/**)",
+      "Edit(./.claude/commands/**)",
+      "Write(./.claude/settings.json)",
+      "Write(./.claude/settings.local.json)",
+      "Write(./.claude/hooks/**)",
+      "Write(./.claude/agents/**)",
+      "Write(./.claude/commands/**)",
+      "MultiEdit(./.claude/settings.json)",
+      "MultiEdit(./.claude/settings.local.json)",
+      "MultiEdit(./.claude/hooks/**)",
+      "MultiEdit(./.claude/agents/**)",
+      "MultiEdit(./.claude/commands/**)"
     ],
     "deny": [
       "Read(./.env)",
@@ -48,39 +63,29 @@
   "hooks": {
     "UserPromptSubmit": [
       {
-        "hooks": [
-          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/budget.mjs\"" }
-        ]
+        "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/budget.mjs\"" }]
       }
     ],
     "PreToolUse": [
       {
         "matcher": "Bash|Read|Edit|MultiEdit|Write|Grep|Glob",
-        "hooks": [
-          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard.mjs\"" }
-        ]
+        "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard.mjs\"" }]
       }
     ],
     "PostToolUse": [
       {
         "matcher": "Edit|MultiEdit|Write",
-        "hooks": [
-          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-edit.mjs\"" }
-        ]
+        "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/post-edit.mjs\"" }]
       }
     ],
     "Stop": [
       {
-        "hooks": [
-          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop-checks.mjs\"" }
-        ]
+        "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/stop-checks.mjs\"" }]
       }
     ],
     "SessionEnd": [
       {
-        "hooks": [
-          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/cost-ledger.mjs\"" }
-        ]
+        "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/cost-ledger.mjs\"" }]
       }
     ]
   }

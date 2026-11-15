@@ -34,9 +34,50 @@ if (['Grep', 'Glob'].includes(tool)) {
   if (isSecretPath(ti.path) || globsForEnv) block('searching secret files');
 }
 
+// Guardrail files: the agent may not change its own guardrails from the shell without Adam's approval.
+// Edit/Write/MultiEdit on these paths are covered by "ask" rules in settings.json instead. This is a
+// best-effort tripwire for obvious shell writes, not a sandbox: it can't see through arbitrary scripts.
+const GUARDRAIL =
+  '\\.claude[/\\\\](?:settings(?:\\.local)?\\.json|(?:hooks|agents|commands)(?:[/\\\\]|(?=$|[\\s\'"])))';
+const guardrailRe = new RegExp(GUARDRAIL, 'i');
+const redirectIntoGuardrail = new RegExp(`(?:^|[^\\w>])\\d*>>?\\s*["']?[^\\s"'|&;]*${GUARDRAIL}`, 'i');
+const inPlaceFlag = /\s(--in-place\b|-[A-Za-z]*i\S*)(?=\s|$)/;
+const scriptedWrite =
+  /\b(writeFile(Sync)?|appendFile(Sync)?|createWriteStream|copyFile(Sync)?|rename(Sync)?|unlink(Sync)?|rmSync|Set-Content|Add-Content|Out-File|Remove-Item|Copy-Item|Move-Item|New-Item)\b|\bopen\([^)]*,\s*['"][wax+]/i;
+
+const lastArg = (segment) =>
+  segment
+    .trim()
+    .split(/\s+/)
+    .filter((t) => !t.startsWith('-'))
+    .pop() ?? '';
+
+// Each rule gets one command segment that already mentions a guardrail path.
+const segmentWriteRules = [
+  (s) => redirectIntoGuardrail.test(s),
+  (s) => /\b(tee|mv|move|rm|del|unlink|rmdir|touch|truncate)\b/.test(s),
+  (s) => /\b(sed|perl)\b/.test(s) && inPlaceFlag.test(s),
+  (s) => /\b(cp|copy|xcopy|install|ln|rsync)\b/.test(s) && guardrailRe.test(lastArg(s)),
+  (s) => /\bprettier\b/.test(s) && /(--write\b|\s-w\b)/.test(s),
+  (s) => /\beslint\b/.test(s) && /--fix\b/.test(s),
+  (s) => /\bgit\s+(checkout|restore|apply|am|stash|rm|mv|clean)\b/.test(s),
+];
+
+function writesGuardrailFile(cmd) {
+  if (!guardrailRe.test(cmd)) return false;
+  if (scriptedWrite.test(cmd)) return true;
+  return cmd
+    .split(/&&|\|\||[;|\n]/)
+    .filter((segment) => guardrailRe.test(segment) || redirectIntoGuardrail.test(segment))
+    .some((segment) => segmentWriteRules.some((rule) => rule(segment)));
+}
+
 // Shell
 if (tool === 'Bash') {
   const cmd = String(ti.command ?? '');
+  if (writesGuardrailFile(cmd)) {
+    block("writing to guardrail files (.claude/settings.json, hooks, agents, commands) needs Adam's approval");
+  }
   const rules = [
     // Path-like .env references only, so `grep process.env src/` still works.
     [/(^|[\s'"=/<>])\.env(?!\.example\b)(\.[\w-]+)?(?=$|[\s'";|&)<>])/i, 'touching .env files from the shell'],
