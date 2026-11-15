@@ -85,6 +85,36 @@ const guardrailWrites = [
   ['rm .husky/pre-commit', 'rm a husky hook'],
   ['cp x.yml .github/workflows/ci.yml', 'cp over a workflow'],
   ['git checkout main -- CLAUDE.md', 'git checkout CLAUDE.md'],
+  // Regressions found by the second review: forms the older guard blocked and a first rewrite let through.
+  ['(rm .claude/hooks/guard.mjs)', 'rm in a subshell'],
+  ['{ rm .claude/hooks/guard.mjs; }', 'rm in a group'],
+  ['if true; then rm .claude/hooks/guard.mjs; fi', 'rm after then'],
+  ['env rm .claude/hooks/guard.mjs', 'rm behind env'],
+  ['timeout 5 rm .claude/hooks/guard.mjs', 'rm behind timeout'],
+  ['xargs rm .claude/hooks/guard.mjs', 'rm behind xargs'],
+  ['bash -c "rm .claude/hooks/guard.mjs"', 'rm inside bash -c'],
+  ["sh -c 'sed -i s/a/b/ .claude/settings.json'", 'sed -i inside sh -c'],
+  ['find .claude/hooks -name guard.mjs -exec rm {} \\;', 'find -exec rm'],
+  ['true & rm .claude/hooks/guard.mjs', 'rm after a background &'],
+  ['echo $(rm .claude/hooks/guard.mjs)', 'rm inside $( )'],
+  ['! rm .claude/hooks/guard.mjs', 'negated rm'],
+  ['"rm" .claude/hooks/guard.mjs', 'quoted rm'],
+  ['\\rm .claude/hooks/guard.mjs', 'backslash-escaped rm'],
+  ['sudo -u root rm .claude/hooks/guard.mjs', 'sudo with options'],
+  ['nice -n 5 rm .claude/hooks/guard.mjs', 'nice with options'],
+  ['find .claude/hooks -delete', 'find -delete'],
+  ['echo x>.claude/budget.json', 'redirect with no space before >'],
+  ['echo x>CLAUDE.md', 'no-space redirect into CLAUDE.md'],
+  ['echo x >| .claude/budget.json', 'clobber redirect'],
+  ['rm -rf .claude', 'rm the whole .claude folder'],
+  ['mv .claude /tmp/claude-bak', 'mv the whole .claude folder'],
+  ['cp -r src .claude', 'cp a tree over .claude'],
+  ['echo x > package.json', 'redirect into package.json'],
+  ['sed -i s/true/false/ tsconfig.json', 'sed -i on tsconfig.json'],
+  ['rm scripts/run-mutation.mjs', 'rm the mutation runner'],
+  ['echo src/ >> .prettierignore', 'append to .prettierignore'],
+  ['sed -i s/a/b/ docs/quality-gates.md', 'sed -i on the gate contract'],
+  ['sed -i s/a/b/ playwright.config.ts', 'sed -i on the Playwright config'],
 ];
 // Hook-skipping variants (blocked, reason differs from the guardrail message).
 const hookSkips = [
@@ -94,6 +124,9 @@ const hookSkips = [
   ['HUSKY=0 git commit -m x', 'HUSKY=0'],
   ['git -c core.hooksPath=/dev/null commit -m x', 'core.hooksPath override'],
   ['git config core.hooksPath /tmp/none', 'core.hooksPath config'],
+  ['git commit --no-veri -m x', 'abbreviated --no-verify'],
+  ['HUSKY="0" git commit -m x', 'quoted HUSKY value'],
+  ['npm test && git commit -n -m x', 'git commit -n in a compound command'],
 ];
 for (const [cmd, why] of hookSkips) test(`blocks hook skip: ${why}`, () => assert.equal(bash(cmd), 2, cmd));
 // Known gaps (see docs/threat-model.md): the regex guard is a tripwire, so these get through. These tests pin
@@ -133,6 +166,15 @@ const guardrailReads = [
   ['git commit -m "note: -n skips hooks, do not use"', 'a message that mentions -n'],
   ['git commit -am "fix"', 'git commit -am'],
   ['git commit --amend --no-edit', 'git commit --no-edit'],
+  ['git commit -m "x" && git log -n 1', 'git log -n after a commit'],
+  ['git commit -m x && head -n 5 README.md', 'head -n after a commit'],
+  ['git log --grep=commit -n 5', 'git log -n mentioning commit'],
+  ['cat package.json', 'reading package.json'],
+  ['git diff tsconfig.json', 'diffing tsconfig.json'],
+  ['npm run lint && cat docs/quality-gates.md', 'reading the gate contract'],
+  ['ls .claude', 'listing the bare .claude folder'],
+  ['cp -r .claude /tmp/claude-copy', 'copying .claude out'],
+  ['find src -name "*.ts"', 'find with no guardrail path'],
 ];
 for (const [cmd, why] of guardrailWrites)
   test(`blocks guardrail write: ${why}`, () => {
@@ -168,6 +210,12 @@ const asksFor = [
   ['Edit', 'eslint.config.mjs', 'the lint rules'],
   ['Edit', '.husky/pre-commit', 'a husky hook'],
   ['Edit', '.github/workflows/ci.yml', 'a workflow'],
+  ['Edit', 'tsconfig.json', 'the type gate'],
+  ['Edit', 'package.json', 'package scripts and dependencies'],
+  ['Edit', 'scripts/run-mutation.mjs', 'the mutation runner'],
+  ['Edit', '.prettierignore', 'the format gate'],
+  ['Edit', 'playwright.config.ts', 'the e2e config'],
+  ['Edit', 'docs/quality-gates.md', 'the gate contract'],
 ];
 for (const [tool, file_path, why] of asksFor)
   test(`asks Adam (hook decision) for ${tool} on ${why}`, () => {

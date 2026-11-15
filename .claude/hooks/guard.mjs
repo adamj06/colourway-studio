@@ -41,16 +41,31 @@ function isSecretPath(p) {
 // Guardrail files: the agent may not change its own guardrails or quality gates without Adam's approval.
 const S = '[/\\\\]';
 const END = '(?=$|[\\s\'"])';
+const GATE_FILES = [
+  'vitest(?:\\.contract)?\\.config\\.ts',
+  'stryker\\.config\\.mjs',
+  '\\.size-limit\\.mjs',
+  'eslint\\.config\\.mjs',
+  'lint-staged\\.config\\.mjs',
+  'commitlint\\.config\\.mjs',
+  'playwright\\.config\\.ts',
+  'tsconfig\\.json',
+  'package\\.json',
+  '\\.prettierignore',
+  `scripts${S}run-mutation\\.mjs`,
+  `docs${S}quality-gates\\.md`,
+].join('|');
 const GUARDRAIL = [
   `\\.claude${S}(?:settings(?:\\.local)?\\.json|budget\\.json|(?:hooks|agents|commands)(?:${S}|${END}))`,
-  `(?:^|${S}|[\\s'"])(?:CLAUDE|AGENTS)\\.md${END}`,
-  `(?:^|${S}|[\\s'"])(?:vitest(?:\\.contract)?\\.config\\.ts|stryker\\.config\\.mjs|\\.size-limit\\.mjs|eslint\\.config\\.mjs|lint-staged\\.config\\.mjs|commitlint\\.config\\.mjs)${END}`,
+  `(?:^|${S}|[\\s'">])(?:CLAUDE|AGENTS)\\.md${END}`,
+  `(?:^|${S}|[\\s'">])(?:${GATE_FILES})${END}`,
   `\\.husky${S}`,
   `\\.github${S}workflows${S}`,
 ].join('|');
 const guardrailRe = new RegExp(GUARDRAIL, 'i');
-// The bare .claude directory, which only matters for git commands that rewrite a whole tree.
+// The bare .claude directory: deleting, moving or restoring the whole folder removes every guardrail at once.
 const bareClaudeRe = /\.claude(?=$|[\s/\\'"])/i;
+const touchesGuardrail = (text) => guardrailRe.test(text) || bareClaudeRe.test(text);
 
 // File tools
 if (['Read', 'Edit', 'MultiEdit', 'Write'].includes(tool)) {
@@ -70,7 +85,8 @@ if (['Edit', 'MultiEdit', 'Write'].includes(tool) && typeof ti.file_path === 'st
     ask(`"${ti.file_path}" is a guardrail or quality-gate file: Adam must approve changes to it.`);
 }
 
-const redirectIntoGuardrail = new RegExp(`(?:^|[^\\w>])\\d*>>?\\s*["']?[^\\s"'|&;]*(?:${GUARDRAIL})`, 'i');
+// A redirect (>, >>, >|) with or without spaces, anywhere in the command, whose target is a guardrail file.
+const redirectIntoGuardrail = new RegExp(`\\d*>>?\\|?\\s*["']?[^\\s"'|&;]*(?:${GUARDRAIL})`, 'i');
 const inPlaceFlag = /\s(--in-place\b|-[A-Za-z]*i\S*)(?=\s|$)/;
 const scriptedWrite =
   /\b(writeFile(Sync)?|appendFile(Sync)?|createWriteStream|copyFile(Sync)?|rename(Sync)?|unlink(Sync)?|rmSync|Set-Content|Add-Content|Out-File|Remove-Item|Copy-Item|Move-Item|New-Item)\b|\bopen\([^)]*,\s*['"][wax+]/i;
@@ -79,17 +95,34 @@ const WRITE_VERBS = new Set(['tee', 'mv', 'move', 'rm', 'del', 'unlink', 'rmdir'
 const COPY_VERBS = new Set(['cp', 'copy', 'xcopy', 'install', 'ln', 'rsync']);
 const GIT_TREE_WRITES = new Set(['checkout', 'restore', 'apply', 'am', 'stash', 'rm', 'mv', 'clean']);
 const WRAPPERS = new Set(['sudo', 'command', 'time', 'nice', 'exec', 'nohup']);
+// Shell keywords that can sit in front of a command (`then rm x`, `! rm x`).
+const LEADERS = new Set(['!', 'if', 'then', 'else', 'elif', 'do', 'while', 'until']);
+// Commands that only read. A segment that starts with one is a read, so `grep -n rm .claude/hooks/x` is allowed.
+// Redirects are checked separately, over the whole command, so `cat x > .claude/y` is still caught.
+const READ_ONLY = new Set(
+  'grep egrep fgrep rg cat head tail less more wc ls dir echo stat file diff tree type sort uniq cut nl od'.split(' '),
+);
 
-/** Command position of a segment: skips VAR=x prefixes and wrappers like sudo. Returns { name, args }. */
+/** One simple command per segment: split on && || ; | & newlines, subshell and group brackets, backticks and $(. */
+const segmentsOf = (cmd) => cmd.split(/&&|\|\||\$\(|[;|&\n(){}`]/);
+
+/** Tokens with quotes and a leading backslash stripped, so `"rm"` and `\rm` count as rm. */
+const tokensOf = (segment) =>
+  segment
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((t) => t.replace(/["']/g, '').replace(/^\\(?=[A-Za-z])/, ''));
+
+const baseName = (token) => path.posix.basename(token.replace(/\\/g, '/')).toLowerCase().replace(/\.exe$/, '');
+
+/** Command position of a segment: skips VAR=x prefixes, shell keywords and wrappers like sudo. */
 function commandOf(segment) {
-  const tokens = segment.trim().split(/\s+/);
+  const tokens = tokensOf(segment);
   let i = 0;
-  while (i < tokens.length && (/^[A-Za-z_]\w*=/.test(tokens[i]) || WRAPPERS.has(tokens[i]))) i++;
-  const name = path.posix
-    .basename((tokens[i] ?? '').replace(/\\/g, '/'))
-    .toLowerCase()
-    .replace(/\.exe$/, '');
-  return { name, args: tokens.slice(i + 1) };
+  while (i < tokens.length && (/^[A-Za-z_]\w*=/.test(tokens[i]) || LEADERS.has(tokens[i]) || WRAPPERS.has(tokens[i])))
+    i++;
+  return { name: baseName(tokens[i] ?? ''), args: tokens.slice(i + 1), tokens };
 }
 
 const lastArg = (args) => args.filter((t) => !t.startsWith('-')).pop() ?? '';
@@ -97,7 +130,7 @@ const lastArg = (args) => args.filter((t) => !t.startsWith('-')).pop() ?? '';
 /** The directory given by -t DIR, -tDIR, --target-directory DIR or --target-directory=DIR, if any. */
 function targetDirectory(args) {
   for (let i = 0; i < args.length; i++) {
-    const a = args[i];
+    const a = args[i] ?? '';
     if (a === '-t' || a === '--target-directory') return args[i + 1] ?? '';
     if (a.startsWith('--target-directory=')) return a.slice('--target-directory='.length);
     if (/^-t.+/.test(a) && !a.startsWith('--')) return a.slice(2);
@@ -109,42 +142,44 @@ function targetDirectory(args) {
 function gitSubcommand(args) {
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '-c' || args[i] === '-C') i++;
-    else if (!args[i].startsWith('-')) return args[i];
+    else if (!args[i]?.startsWith('-')) return args[i] ?? '';
   }
   return '';
 }
 
-// Each segment is one simple command (split on && || ; | and newlines). Verbs only count at command position,
-// so `grep -n rm .claude/hooks/guard.mjs` is a read, not a write.
 function gitWritesGuardrail(args, segment) {
-  const rewritesTree = GIT_TREE_WRITES.has(gitSubcommand(args));
-  return rewritesTree && (guardrailRe.test(segment) || bareClaudeRe.test(segment));
+  return GIT_TREE_WRITES.has(gitSubcommand(args)) && touchesGuardrail(segment);
 }
 
-/** A segment that already mentions a guardrail path: does its command write to it? */
-function commandWritesGuardrail(name, args, segment) {
-  if (WRITE_VERBS.has(name)) return true;
-  if (COPY_VERBS.has(name)) {
-    // With -t DIR the destination is DIR and the last argument is a source; otherwise it is the last argument.
-    const target = targetDirectory(args);
-    return guardrailRe.test(target || lastArg(args));
-  }
-  if (name === 'sed' || name === 'perl') return inPlaceFlag.test(segment);
-  if (/\bprettier\b/.test(segment)) return /(--write\b|\s-w\b)/.test(segment);
-  if (/\beslint\b/.test(segment)) return /--fix\b/.test(segment);
+/** The copy-like command's destination is the -t directory if there is one, otherwise the last argument. */
+function copiesIntoGuardrail(names, tokens) {
+  const verb = names.findIndex((n) => COPY_VERBS.has(n));
+  const args = tokens.slice(verb + 1);
+  return touchesGuardrail(targetDirectory(args) || lastArg(args));
+}
+
+/** A segment that mentions a guardrail path and is not a known read: does it write to it? Fails closed. */
+function commandWritesGuardrail(tokens, segment) {
+  const names = tokens.map(baseName);
+  if (names.some((n) => WRITE_VERBS.has(n))) return true;
+  if (names.some((n) => COPY_VERBS.has(n))) return copiesIntoGuardrail(names, tokens);
+  if (names.includes('find') && /\s-delete\b/.test(segment)) return true;
+  if (names.includes('sed') || names.includes('perl')) return inPlaceFlag.test(segment);
+  if (names.includes('prettier')) return /(--write\b|\s-w\b)/.test(segment);
+  if (names.includes('eslint')) return /--fix\b/.test(segment);
   return false;
 }
 
 function segmentWritesGuardrail(segment) {
-  if (redirectIntoGuardrail.test(segment)) return true;
-  const { name, args } = commandOf(segment);
+  const { name, args, tokens } = commandOf(segment);
+  if (READ_ONLY.has(name)) return false;
   if (name === 'git') return gitWritesGuardrail(args, segment);
-  return guardrailRe.test(segment) && commandWritesGuardrail(name, args, segment);
+  return touchesGuardrail(segment) && commandWritesGuardrail(tokens, segment);
 }
 
-const segmentsOf = (cmd) => cmd.split(/&&|\|\||[;|\n]/);
-
 function writesGuardrailFile(cmd) {
+  // A space is added after every > so a name glued to the redirect (`echo x>CLAUDE.md`) still has a separator.
+  if (redirectIntoGuardrail.test(cmd.replace(/>\|?/g, '$& '))) return true;
   if (guardrailRe.test(cmd) && scriptedWrite.test(cmd)) return true;
   return segmentsOf(cmd).some(segmentWritesGuardrail);
 }
@@ -157,10 +192,15 @@ function dumpsEnvironment(cmd) {
   });
 }
 
-// Skipping the commit hooks without --no-verify. Quoted text is blanked first so a message can mention "-n".
-const unquoted = (line) => line.replace(/"[^"]*"|'[^']*'/g, '""');
-const commitNoVerifyShort = (cmd) =>
-  cmd.split('\n').some((line) => /\bgit\b.*\bcommit\b.*\s-[A-Za-z]*n[A-Za-z]*(?=\s|$)/.test(unquoted(line)));
+// `git commit -n` (or a cluster like -an) skips the commit hooks. Checked per command, with quoted text blanked,
+// so `git commit -m x && git log -n 1` and messages that mention -n are not caught.
+const unquoted = (text) => text.replace(/"[^"]*"|'[^']*'/g, '""');
+function skipsCommitHooks(cmd) {
+  return segmentsOf(unquoted(cmd)).some((segment) => {
+    const { name, args } = commandOf(segment);
+    return name === 'git' && gitSubcommand(args) === 'commit' && args.some((a) => /^-[A-Za-z]*n[A-Za-z]*$/.test(a));
+  });
+}
 
 // Shell
 if (tool === 'Bash') {
@@ -178,15 +218,16 @@ if (tool === 'Bash') {
     [/\bgit\s+push\b.*(--force\b|--force-with-lease\b|\s-f\b)/, 'force push'],
     [/\bgit\s+push\b.*\b(main|master)\b/, 'pushing to main (use a branch and a PR)'],
     [/\bgit\s+reset\s+--hard\b/, 'git reset --hard'],
-    [/--no-verify\b/, 'skipping git hooks'],
-    [/\bHUSKY\s*=\s*0\b/, 'disabling husky'],
+    // Git accepts any unique abbreviation of a long option, so --no-veri is the same flag.
+    [/--no-ver/, 'skipping git hooks'],
+    [/\bHUSKY\s*=\s*["']?0\b/, 'disabling husky'],
     [/\bcore\.hooksPath\b/i, 'redirecting git hooks'],
     [/\bvercel\b.*--prod\b/, 'production deploy from local (CI deploys main)'],
     [/\b(curl|wget)\b[^|]*\|\s*(sudo\s+)?(sh|bash|zsh|pwsh|iex)\b/, 'piping a download into a shell'],
     [/\bnpm\s+publish\b/, 'npm publish'],
   ];
   for (const [re, why] of rules) if (re.test(cmd)) block(why);
-  if (commitNoVerifyShort(cmd)) block('skipping git hooks (git commit -n)');
+  if (skipsCommitHooks(cmd)) block('skipping git hooks (git commit -n)');
 }
 
 process.exit(0);
