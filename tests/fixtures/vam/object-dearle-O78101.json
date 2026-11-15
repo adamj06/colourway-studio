@@ -1,0 +1,305 @@
+{
+  "meta": {
+    "version": "2.1",
+    "_links": {
+      "self": {
+        "href": "https://api.vam.ac.uk/v2/object/O78101"
+      },
+      "collection_page": {
+        "href": "https://collections.vam.ac.uk/item/O78101/"
+      }
+    },
+    "images": {
+      "_primary_thumbnail": "https://framemark.vam.ac.uk/collections/2006AT6953/full/!100,100/0/default.jpg",
+      "_iiif_image": "https://framemark.vam.ac.uk/collections/2006AT6953/",
+      "_alt_iiif_image": [],
+      "imageResolution": "high",
+      "_images_meta": [
+        {
+          "assetRef": "2006AT6953",
+          "copyright": "© Victoria and Albert Museum, London",
+          "sensitiveImage": false
+        },
+        {
+          "assetRef": "2006AV0331",
+          "copyright": "© Victoria and Albert Museum, London",
+          "sensitiveImage": false
+        },
+        {
+          "assetRef": "2018KX0585",
+          "copyright": "© Victoria and Albert Museum, London",
+          "sensitiveImage": false
+        },
+        {
+          "assetRef": "2020MT3990",
+          "copyright": "© Victoria and Albert Museum, London",
+          "sensitiveImage": false
+        }
+      ]
+    },
+    "see_also": {
+      "_iiif_pres": "https://iiif.vam.ac.uk/collections/O78101/manifest.json",
+      "_alt_iiif_pres": []
+    }
+  },
+  "record": {
+    "systemNumber": "O78101",
+    "accessionNumber": "CIRC.848-1956",
+    "objectType": "Screen",
+    "titles": [],
+    "summaryDescription": "A three-panelled furnishing screen made by Morris & Co. inset with embroidered panels showing 'Parrot Tulip', 'Large Horned Poppy' and 'Anemone' designs.  Screens were available from Morris & Co. either as kits, sold with a marked ground and silk threads, to be worked at home, or as completed wall hangings or screens. Although the panels were designed in the mid-1880s, this screen was made at a later date. The donor has suggested  '... the screen was worked and made up in the William Morris shop prior to 1914'.\r\n\r\nThis screen was purchased from Morris & Co.'s shop at 449 Oxford Street, London.  An identical screen showing two of these panels was illustrated in Morris & Co.'s 'Embroidery Work' catalogue published about 1910, priced at £17 10s. J.H. Dearle (1860-1932), who designed the screen panels, was William Morris's assistant.  He eventually became Artistic Director of  the Morris firm. May Morris, the younger daughter of William Morris, directed the embroidery section of Morris & Co. from 1885 until 1896.\r\n\r\nMorris screens of this type can be seen in contemporary photographs of a number of large houses including Bullerswood in Kent, Stanmore Hall in Middlesex and in the homes of the Barr Smith family in Adelaide, Australia.",
+    "physicalDescription": "Three-fold screen with a glazed mahogany frame, and panels of canvas embroidered with silks in darning, stem and satin stitch.",
+    "artistMakerPerson": [
+      {
+        "name": {
+          "text": "John Henry Dearle",
+          "id": "A9365"
+        },
+        "association": {
+          "text": "designer",
+          "id": "AAT25190"
+        },
+        "note": ""
+      }
+    ],
+    "artistMakerOrganisations": [
+      {
+        "name": {
+          "text": "Morris & Co.",
+          "id": "A1365"
+        },
+        "association": {
+          "text": "manufacturer",
+          "id": "x33306"
+        },
+        "note": ""
+      },
+      {
+        "name": {
+          "text": "",
+          "id": ""
+        },
+        "association": {
+          "text": "",
+          "id": ""
+        },
+        "note": ""
+      }
+    ],
+    "artistMakerPeople": [],
+    "materials": [
+      {
+        "text": "canvas",
+        "id": "AAT14078"
+      },
+      {
+        "text": "silk (textile)",
+        "id": "AAT243428"
+      }
+    ],
+    "techniques": [
+      {
+        "text": "embroidering",
+        "id": "AAT53653"
+      }
+    ],
+    "materialsAndTechniques": "Embroidered canvas with darning, stem and satin stitch",
+    "categories": [
+      {
+        "text": "Textiles",
+        "id": "THES48885"
+      },
+      {
+        "text": "Furniture",
+        "id": "THES48948"
+      }
+    ],
+    "styles": [],
+    "collectionCode": {
+      "text": "T&F",
+      "id": "THES48601"
+    },
+    "images": ["2006AT6953", "2006AV0331", "2018KX0585", "2020MT3990"],
+    "imageResolution": "high",
+    "galleryLocations": [
+      {
+        "current": {
+          "text": "B",
+          "id": "THES386305"
+        },
+        "free": "",
+        "case": "",
+        "shelf": "",
+        "box": ""
+      }
+    ],
+    "partTypes": [
+      [
+        {
+          "text": "Screen",
+          "id": ""
+        }
+      ]
+    ],
+    "contentWarnings": [
+      {
+        "apprise": "",
+        "note": ""
+      }
+    ],
+    "placesOfOrigin": [
+      {
+        "place": {
+          "text": "London",
+          "id": "x28980"
+        },
+        "association": {
+          "text": "made",
+          "id": "x28654"
+        },
+        "note": ""
+      }
+    ],
+    "productionDates": [
+      {
+        "date": {
+          "text": "1885-1910",
+          "earliest": "1885-01-01",
+          "latest": "1910-12-31"
+        },
+        "association": {
+          "text": "made",
+          "id": "x28654"
+        },
+        "note": ""
+      }
+    ],
+    "associatedObjects": [],
+    "creditLine": "Given by Miss J. Constant",
+    "dimensions": [
+      {
+        "dimension": "Height",
+        "value": "162.9",
+        "unit": "cm",
+        "qualifier": "",
+        "date": {
+          "text": "",
+          "earliest": null,
+          "latest": null
+        },
+        "part": "",
+        "note": ""
+      },
+      {
+        "dimension": "Width",
+        "value": "166.2",
+        "unit": "cm",
+        "qualifier": "",
+        "date": {
+          "text": "",
+          "earliest": null,
+          "latest": null
+        },
+        "part": "maximum",
+        "note": ""
+      },
+      {
+        "dimension": "Depth",
+        "value": "2.8",
+        "unit": "cm",
+        "qualifier": "",
+        "date": {
+          "text": "",
+          "earliest": null,
+          "latest": null
+        },
+        "part": "",
+        "note": ""
+      },
+      {
+        "dimension": "Weight",
+        "value": "32.5",
+        "unit": "kg",
+        "qualifier": "",
+        "date": {
+          "text": "",
+          "earliest": null,
+          "latest": null
+        },
+        "part": "",
+        "note": ""
+      }
+    ],
+    "dimensionsNote": "Dimensions checked: measured; 23/12/1998 by sf",
+    "marksAndInscriptions": [],
+    "objectHistory": "Designed by  John Henry Dearle (born in 1860, died in 1932); made by Morris & Co., London",
+    "historicalContext": "",
+    "briefDescription": "Embroidered screen with three fold panels, designed by John Henry Dearle, manufactured by Morris & Co, London, 1885-1910",
+    "bibliographicReferences": [
+      {
+        "reference": {
+          "text": "Parry, Linda (ed.), <i>William Morris</i> London : Philip Wilson, 1996",
+          "id": "AUTH356798"
+        },
+        "details": "",
+        "free": ""
+      },
+      {
+        "reference": {
+          "text": "Livingstone, Karen & Parry, Linda (eds.), <i>International Arts and Crafts</i>, London : V&A Publications, 2005",
+          "id": "AUTH357959"
+        },
+        "details": "",
+        "free": ""
+      }
+    ],
+    "production": "",
+    "productionType": {
+      "text": "",
+      "id": ""
+    },
+    "contentDescription": "",
+    "contentPlaces": [],
+    "associatedPlaces": [],
+    "contentPerson": [],
+    "associatedPerson": [],
+    "contentOrganisations": [],
+    "associatedOrganisations": [],
+    "contentPeople": [],
+    "associatedPeople": [],
+    "contentEvents": [],
+    "associatedEvents": [],
+    "contentOthers": [],
+    "contentConcepts": [],
+    "contentLiteraryRefs": [],
+    "galleryLabels": [
+      {
+        "text": "British Galleries:\nEmbroidered screens were popular Arts and Crafts furnishings.  This example by Morris & Company was designed by John Henry Dearle, William Morris's assistant, and embroidered under the supervision of William's daughter May Morris, who ran the Embroidery Section of the firm. These panels were also available for sale  in kit form to embroider at home.",
+        "date": {
+          "text": "27/03/2003",
+          "earliest": "2003-03-27",
+          "latest": "2003-03-27"
+        }
+      },
+      {
+        "text": "International Arts & Crafts\r\nThis screen was illustrated in Morris & Co.'s catalogue of 'Embroidery Work' in 1910 and priced at £17 10s.  It could be purchased from the Morris shop at 449 Oxford Street, London, and was also available as a kit to embroider at home.",
+        "date": {
+          "text": "17/03/2005",
+          "earliest": "2005-03-17",
+          "latest": "2005-03-17"
+        }
+      }
+    ],
+    "partNumbers": ["CIRC.848-1956"],
+    "accessionNumberNum": "848",
+    "accessionNumberPrefix": "CIRC",
+    "accessionYear": 1956,
+    "otherNumbers": [],
+    "copyNumber": "",
+    "aspects": ["WHOLE"],
+    "assets": ["2019LN0586", "2019LR1552", "2019LV5790", "2019LV5151"],
+    "recordModificationDate": "2026-08-26",
+    "recordCreationDate": "2003-03-27",
+    "availableToBook": false
+  }
+}

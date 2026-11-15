@@ -1,0 +1,252 @@
+{
+  "meta": {
+    "version": "2.1",
+    "_links": {
+      "self": {
+        "href": "https://api.vam.ac.uk/v2/object/O270961"
+      },
+      "collection_page": {
+        "href": "https://collections.vam.ac.uk/item/O270961/"
+      }
+    },
+    "images": null,
+    "see_also": null
+  },
+  "record": {
+    "systemNumber": "O270961",
+    "accessionNumber": "T.333-1985",
+    "objectType": "Furnishing fabric",
+    "titles": [
+      {
+        "title": "Evenlode",
+        "type": "manufacturer's title"
+      }
+    ],
+    "summaryDescription": "",
+    "physicalDescription": "Furnishing fabric of block-printed cotton showing a selvedge to one side. Coloured in reds, greens and blues printed onto a white ground with a meandering floral design of carnations, tulips and other more exotic blooms.",
+    "artistMakerPerson": [
+      {
+        "name": {
+          "text": "Morris, William",
+          "id": "A8676"
+        },
+        "association": {
+          "text": "designer",
+          "id": "x36960"
+        },
+        "note": ""
+      }
+    ],
+    "artistMakerOrganisations": [
+      {
+        "name": {
+          "text": "Morris & Co",
+          "id": "A1365"
+        },
+        "association": {
+          "text": "manufacturers",
+          "id": "AAT25230"
+        },
+        "note": ""
+      }
+    ],
+    "artistMakerPeople": [],
+    "materials": [
+      {
+        "text": "cotton (textile)",
+        "id": "AAT14067"
+      }
+    ],
+    "techniques": [
+      {
+        "text": "block printing",
+        "id": "AAT53289"
+      }
+    ],
+    "materialsAndTechniques": "Block-printed cotton",
+    "categories": [
+      {
+        "text": "Textiles",
+        "id": "THES48885"
+      }
+    ],
+    "styles": [],
+    "collectionCode": {
+      "text": "T&F",
+      "id": "THES48601"
+    },
+    "images": [],
+    "imageResolution": "high",
+    "galleryLocations": [
+      {
+        "current": {
+          "text": "013",
+          "id": "THES309114"
+        },
+        "free": "",
+        "case": "",
+        "shelf": "",
+        "box": ""
+      }
+    ],
+    "partTypes": [
+      [
+        {
+          "text": "Furnishing fabric",
+          "id": ""
+        }
+      ]
+    ],
+    "contentWarnings": [
+      {
+        "apprise": "",
+        "note": ""
+      }
+    ],
+    "placesOfOrigin": [
+      {
+        "place": {
+          "text": "England",
+          "id": "x28826"
+        },
+        "association": {
+          "text": "made",
+          "id": "x28654"
+        },
+        "note": ""
+      }
+    ],
+    "productionDates": [
+      {
+        "date": {
+          "text": "1925-1930",
+          "earliest": "1925-01-01",
+          "latest": "1930-12-31"
+        },
+        "association": {
+          "text": "made",
+          "id": "x28654"
+        },
+        "note": ""
+      },
+      {
+        "date": {
+          "text": "1883",
+          "earliest": "1883-01-01",
+          "latest": "1883-12-31"
+        },
+        "association": {
+          "text": "designed",
+          "id": "x29338"
+        },
+        "note": "registered September 20th 1883"
+      }
+    ],
+    "associatedObjects": [],
+    "creditLine": "",
+    "dimensions": [
+      {
+        "dimension": "Length",
+        "value": "114",
+        "unit": "in",
+        "qualifier": "",
+        "date": {
+          "text": "",
+          "earliest": null,
+          "latest": null
+        },
+        "part": "",
+        "note": ""
+      },
+      {
+        "dimension": "Length",
+        "value": "189",
+        "unit": "cm",
+        "qualifier": "",
+        "date": {
+          "text": "",
+          "earliest": null,
+          "latest": null
+        },
+        "part": "",
+        "note": ""
+      },
+      {
+        "dimension": "Width",
+        "value": "38",
+        "unit": "in",
+        "qualifier": "",
+        "date": {
+          "text": "",
+          "earliest": null,
+          "latest": null
+        },
+        "part": "",
+        "note": ""
+      },
+      {
+        "dimension": "Width",
+        "value": "96.5",
+        "unit": "cm",
+        "qualifier": "",
+        "date": {
+          "text": "",
+          "earliest": null,
+          "latest": null
+        },
+        "part": "",
+        "note": ""
+      }
+    ],
+    "dimensionsNote": "",
+    "marksAndInscriptions": [],
+    "objectHistory": "",
+    "historicalContext": "",
+    "briefDescription": "'Evenlode', furnishing fabric, block printed cotton, British, designed by William Morris for Morris & Co., 1883",
+    "bibliographicReferences": [],
+    "production": "Originally designed for Morris & Co. in 1883.",
+    "productionType": {
+      "text": "",
+      "id": ""
+    },
+    "contentDescription": "",
+    "contentPlaces": [],
+    "associatedPlaces": [],
+    "contentPerson": [],
+    "associatedPerson": [],
+    "contentOrganisations": [],
+    "associatedOrganisations": [],
+    "contentPeople": [],
+    "associatedPeople": [],
+    "contentEvents": [],
+    "associatedEvents": [],
+    "contentOthers": [
+      {
+        "text": "flowers",
+        "id": "x35571"
+      },
+      {
+        "text": "carnations",
+        "id": "x30499"
+      },
+      {
+        "text": "tulips",
+        "id": "x35467"
+      }
+    ],
+    "contentConcepts": [],
+    "contentLiteraryRefs": [],
+    "galleryLabels": [],
+    "partNumbers": ["T.333-1985"],
+    "accessionNumberNum": "333",
+    "accessionNumberPrefix": "T",
+    "accessionYear": 1985,
+    "otherNumbers": [],
+    "copyNumber": "",
+    "aspects": ["WHOLE"],
+    "assets": [],
+    "recordModificationDate": "2025-04-11",
+    "recordCreationDate": "2009-06-24",
+    "availableToBook": true
+  }
+}

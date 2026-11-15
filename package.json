@@ -9,7 +9,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint --max-warnings 0 .",
+    "lint": "next typegen && eslint --max-warnings 0 .",
     "typecheck": "next typegen && tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -18,7 +18,8 @@
     "test:mutation": "node scripts/run-mutation.mjs",
     "test:contract": "vitest run --config vitest.contract.config.ts",
     "size": "size-limit",
-    "prepare": "husky"
+    "prepare": "husky",
+    "verify:clean": "node scripts/verify-clean.mjs"
   },
   "dependencies": {
     "next": "16.4.6",

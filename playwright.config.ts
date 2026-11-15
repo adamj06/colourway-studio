@@ -9,6 +9,9 @@ const isCI = Boolean(process.env.CI);
 
 export default defineConfig({
   testDir: 'tests/e2e',
+  // @external tests talk to the real framemark.vam.ac.uk, so they stay out of the PR e2e job (flaky-by-nature, and
+  // CI must not depend on a third party). contract.yml and smoke.yml set RUN_EXTERNAL=1 to include them.
+  ...(process.env.RUN_EXTERNAL ? {} : { grepInvert: /@external/ }),
   fullyParallel: true,
   forbidOnly: isCI,
   retries: isCI ? 1 : 0,

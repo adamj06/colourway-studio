@@ -13,6 +13,10 @@ const TEST_FILES = ['**/*.test.{ts,tsx}', 'tests/**/*.{ts,tsx}', '**/*.spec.ts']
 const jsxA11yRecommendedRules = jsxA11y.flatConfigs.recommended.rules;
 
 const eslintConfig = defineConfig([
+  // Inline `eslint-disable` / `eslint-enable` / `eslint-env` comments are ignored: CLAUDE.md bans them, and this
+  // makes the ban mechanical. A genuine exception is a scoped override below, with a comment linking its ADR.
+  { linterOptions: { noInlineConfig: true } },
+
   ...nextVitals,
   ...nextTs,
 
@@ -90,6 +94,13 @@ const eslintConfig = defineConfig([
     rules: {
       'max-lines-per-function': ['error', { max: 120, skipBlankLines: true, skipComments: true }],
     },
+  },
+
+  // The one <img> wrapper. V&A images are sized by the IIIF server and loaded directly, so next/image would only burn
+  // Vercel image-optimisation quota (docs/adr/0002-client-side-image-processing.md). Any other <img> stays flagged.
+  {
+    files: ['src/app/_components/DesignImage.tsx'],
+    rules: { '@next/next/no-img-element': 'off' },
   },
 
   // The structured logger is the one place allowed to call console.

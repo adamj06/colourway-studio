@@ -1,0 +1,233 @@
+{
+  "meta": {
+    "version": "2.1",
+    "_links": {
+      "self": { "href": "https://api.vam.ac.uk/v2/object/O248458" },
+      "collection_page": { "href": "https://collections.vam.ac.uk/item/O248458/" }
+    },
+    "images": {
+      "_primary_thumbnail": "https://framemark.vam.ac.uk/collections/2017KB4817/full/!100,100/0/default.jpg",
+      "_iiif_image": "https://framemark.vam.ac.uk/collections/2017KB4817/",
+      "_alt_iiif_image": [],
+      "imageResolution": "high",
+      "_images_meta": [
+        { "assetRef": "2017KB4817", "copyright": "©Victoria and Albert Museum, London", "sensitiveImage": false }
+      ]
+    },
+    "see_also": { "_iiif_pres": "https://iiif.vam.ac.uk/collections/O248458/manifest.json", "_alt_iiif_pres": [] }
+  },
+  "record": {
+    "systemNumber": "O248458",
+    "accessionNumber": "E.451-1919",
+    "objectType": "Wallpaper",
+    "titles": [{ "title": "Trellis", "type": "manufacturer's title" }],
+    "summaryDescription": "<b>Object Type</b><br>In Britain, paper printed with patterns has been used for decorating walls since the 16th century. By the late 19th century wallpapers were widely used by all classes, in homes and also in public buildings. William Morris designed a number of wallpapers, all with repeating patterns based on natural forms.<br><br><b>Places</b><br>Morris was prompted to design his own wallpapers because he could not find any that he liked well enough to use in his own home. He designed 'Trellis' shortly after moving to the Red House. The gardens at the Red House were arranged in a Medieval style, with roses growing over trellises which enclosed the flowerbeds. This wallpaper pattern was inspired by these trellises.<br><br><b>Design & Designing </b><br>'Trellis' is typical of Morris's early wallpaper patterns. It combines simple bird and flower forms with a plain coloured background. It is a compromise between the boldly coloured pictorial patterns which were then popular with the general public, and the formalised flat patterns in muted tones which were promoted by the design reform movement. Philip Webb, the architect of the Red House, drew the birds for this wallpaper design.",
+    "physicalDescription": "'Trellis' wallpaper pattern, a flowering thorned rose bush growing on a wooden trellis, with birds and flying insects; Block-printed in distemper colours, on paper; Inscribed on the back in ink with title, number and price. This colourway predominantly grey-green.\r\nPart of <i>Volume 1</i>, a pattern book containing 25 Morris & Co. patterns from 1862-81 (E.441-529-1919).",
+    "artistMakerPerson": [
+      {
+        "name": { "text": "Morris, William", "id": "A8676" },
+        "association": { "text": "designer", "id": "x34907" },
+        "note": ""
+      },
+      {
+        "name": { "text": "Webb, Philip Speakman", "id": "A1012" },
+        "association": { "text": "designer", "id": "x34907" },
+        "note": "designed the birds"
+      }
+    ],
+    "artistMakerOrganisations": [
+      {
+        "name": { "text": "Jeffrey & Co.", "id": "A9139" },
+        "association": { "text": "manufacturer", "id": "x33306" },
+        "note": ""
+      },
+      {
+        "name": { "text": "Morris & Co.", "id": "A1365" },
+        "association": { "text": "publisher", "id": "x32600" },
+        "note": ""
+      }
+    ],
+    "artistMakerPeople": [],
+    "materials": [
+      { "text": "paper", "id": "x30308" },
+      { "text": "distemper", "id": "AAT15035" }
+    ],
+    "techniques": [
+      { "text": "printing", "id": "AAT53319" },
+      { "text": "colour woodblock print", "id": "x37101" },
+      { "text": "block printing", "id": "AAT53289" }
+    ],
+    "materialsAndTechniques": "block-printed in distemper colours, on paper",
+    "categories": [
+      { "text": "Wall coverings", "id": "THES48878" },
+      { "text": "Prints", "id": "THES48903" }
+    ],
+    "styles": [{ "text": "Arts and Crafts (movement)", "id": "AAT21205" }],
+    "collectionCode": { "text": "PDP", "id": "THES48595" },
+    "images": ["2017KB4817"],
+    "imageResolution": "high",
+    "galleryLocations": [
+      { "current": { "text": "LVLE", "id": "THES49657" }, "free": "", "case": "DR", "shelf": "144", "box": "" }
+    ],
+    "partTypes": [[{ "text": "wallpaper", "id": "" }]],
+    "contentWarnings": [{ "apprise": "", "note": "" }],
+    "placesOfOrigin": [
+      { "place": { "text": "England", "id": "x28826" }, "association": { "text": "made", "id": "x28654" }, "note": "" }
+    ],
+    "productionDates": [
+      {
+        "date": { "text": "11/1862", "earliest": "1862-11-01", "latest": "1862-11-30" },
+        "association": { "text": "designed (pattern)", "id": "x30229" },
+        "note": ""
+      },
+      {
+        "date": { "text": "01/02/1864", "earliest": "1864-02-01", "latest": "1864-02-01" },
+        "association": { "text": "design registered", "id": "x29997" },
+        "note": ""
+      },
+      {
+        "date": { "text": "1864", "earliest": "1864-01-01", "latest": "1864-12-31" },
+        "association": { "text": "manufactured", "id": "x29350" },
+        "note": ""
+      }
+    ],
+    "associatedObjects": [
+      { "object": { "text": "E.450-1919", "id": "O248454" }, "association": "Colourway" },
+      { "object": { "text": "E.452-1919", "id": "O78220" }, "association": "Colourway" },
+      { "object": { "text": "E.453-1919", "id": "O248459" }, "association": "Colourway" },
+      { "object": { "text": "CIRC.247-1964", "id": "O1036730" }, "association": "Version" },
+      { "object": { "text": "E.3700-1927", "id": "O249380" }, "association": "Colourway" },
+      { "object": { "text": "E.3701-1927", "id": "O249381" }, "association": "Colourway" },
+      { "object": { "text": "E.3702-1927", "id": "O249382" }, "association": "Colourway" },
+      { "object": { "text": "E.3703-1927", "id": "O249393" }, "association": "Colourway" },
+      { "object": { "text": "E.2747-1980", "id": "O251032" }, "association": "Colourway" },
+      { "object": { "text": "E.2748-1980", "id": "O251035" }, "association": "Colourway" },
+      { "object": { "text": "E.2749-1980", "id": "O251036" }, "association": "Colourway" },
+      { "object": { "text": "E.2750-1980", "id": "O251037" }, "association": "Colourway" },
+      { "object": { "text": "E.2795-1980", "id": "O251038" }, "association": "Colourway" },
+      { "object": { "text": "E.2811-1980", "id": "O251040" }, "association": "Colourway" }
+    ],
+    "creditLine": "Given by Morris & Co.",
+    "dimensions": [
+      {
+        "dimension": "Height",
+        "value": "68.5",
+        "unit": "cm",
+        "qualifier": "",
+        "date": { "text": "", "earliest": null, "latest": null },
+        "part": "size of volume",
+        "note": ""
+      },
+      {
+        "dimension": "Width",
+        "value": "53.3",
+        "unit": "cm",
+        "qualifier": "",
+        "date": { "text": "", "earliest": null, "latest": null },
+        "part": "size of volume",
+        "note": ""
+      },
+      {
+        "dimension": "Height",
+        "value": "67.7",
+        "unit": "cm",
+        "qualifier": "",
+        "date": { "text": "", "earliest": null, "latest": null },
+        "part": "",
+        "note": ""
+      },
+      {
+        "dimension": "Width",
+        "value": "52.6",
+        "unit": "cm",
+        "qualifier": "",
+        "date": { "text": "", "earliest": null, "latest": null },
+        "part": "",
+        "note": ""
+      }
+    ],
+    "dimensionsNote": "Dimensions from: Oman, Charles C., and Hamilton, Jean. <u>Wallpapers: a history and illustrated catalogue of the collection of the Victoria and Albert Museum</u>. London: Sotheby Publications, in association with the Victoria and Albert Museum, 1982.",
+    "marksAndInscriptions": [
+      {
+        "content": "Trellis 8 / 8/8",
+        "inscriber": { "name": { "text": "", "id": "" }, "association": { "text": "", "id": "" } },
+        "date": { "text": "", "earliest": null, "latest": null },
+        "description": "",
+        "interpretation": "",
+        "language": "",
+        "medium": "",
+        "method": "",
+        "position": "",
+        "script": "",
+        "translation": "",
+        "transliteration": "",
+        "type": "",
+        "note": "Inscribed on the back in ink with title, number and price."
+      }
+    ],
+    "objectHistory": "Given by Morris & Co.\r\nThe first paper William Morris designed, but the third to be issued (1864).\r\nThe birds were designed by Phillip Webb.\r\n\r\nDesigned by William Morris  (born in London, 1834, died there in 1896) with additions by Philip Webb (born in Oxford, 1831, died in Worth, West Sussex, 1915); printed in London by Jeffrey & Co. for Morris, Marshall, Faulkner & Co.",
+    "historicalContext": "",
+    "briefDescription": "'Trellis' wallpaper pattern, a flowering thorned rose bush growing on a wooden trellis, with birds and flying insects; Block-printed in distemper colours, on paper; The first paper designed by William Morris, but the third to be issued; The birds were designed by Philip Webb; Part of 'Volume 1', a pattern book containing 25 Morris & Co. patterns from 1862-81 (E.441-529-1919); England; Designed 1862; Registered and produced 1864.",
+    "bibliographicReferences": [
+      {
+        "reference": { "text": "", "id": "" },
+        "details": "",
+        "free": "Oman, Charles C., and Hamilton, Jean. <u>Wallpapers: a history and illustrated catalogue of the collection of the Victoria and Albert Museum</u>. London: Sotheby Publications, in association with the Victoria and Albert Museum, 1982."
+      },
+      {
+        "reference": { "text": "", "id": "" },
+        "details": "",
+        "free": "Parry, Linda, ed. <u>William Morris</u> London : Philip Wilson in association with the Victoria and Albert Museum, 1996. Published to coincide with an exhibition at the Victoria and Albert Museum, 9 May-1 Sept. 1996, p.206."
+      },
+      {
+        "reference": { "text": "", "id": "" },
+        "details": "",
+        "free": "Oman, Charles C., and Hamilton, Jean. <u>Wallpapers: a history and illustrated catalogue of the collection of the Victoria and Albert Museum</u>. London: Sotheby Publications, in association with the Victoria and Albert Museum, 1982."
+      },
+      {
+        "reference": { "text": "", "id": "" },
+        "details": "",
+        "free": "<u>Victoria and Albert Museum, Department of  Engraving, Illustration and  Design & Department  of Paintings, Accessions 1919</u>, London: Printed Under the Authority of  His Majesty's  Stationery Office, 1921"
+      }
+    ],
+    "production": "Within pattern book <i>Volume 1</i> (1862-81).\r\nThe 'Trellis' design was the first paper William Morris designed, but the third to be issued. Produced 1864. The birds were designed by Phillip Webb.",
+    "productionType": { "text": "", "id": "" },
+    "contentDescription": "",
+    "contentPlaces": [],
+    "associatedPlaces": [],
+    "contentPerson": [],
+    "associatedPerson": [],
+    "contentOrganisations": [],
+    "associatedOrganisations": [],
+    "contentPeople": [],
+    "associatedPeople": [],
+    "contentEvents": [],
+    "associatedEvents": [],
+    "contentOthers": [
+      { "text": "rose", "id": "x35507" },
+      { "text": "flowers", "id": "AAT132399" },
+      { "text": "birds", "id": "x35043" },
+      { "text": "woodpeckers", "id": "x35659" },
+      { "text": "insects", "id": "x30217" }
+    ],
+    "contentConcepts": [],
+    "contentLiteraryRefs": [],
+    "galleryLabels": [
+      {
+        "text": "British Galleries:\r\nPhilip Webb supplied the bird designs for this, the first wallpaper that William Morris ever designed. The pattern was inspired by the garden at Red House, Bexleyheath, near London,  Morris's first home. Wallpaper was one of the earliest forms of decoration supplied by the firm. Their own early attempts to print their designs failed and from this time all Morris papers were produced by Jeffrey & Co..",
+        "date": { "text": "2010", "earliest": "2010-01-01", "latest": "2010-12-31" }
+      }
+    ],
+    "partNumbers": ["E.451-1919"],
+    "accessionNumberNum": "451",
+    "accessionNumberPrefix": "E",
+    "accessionYear": 1919,
+    "otherNumbers": [],
+    "copyNumber": "",
+    "aspects": ["WHOLE"],
+    "assets": [],
+    "recordModificationDate": "2025-04-28",
+    "recordCreationDate": "2009-06-10",
+    "availableToBook": false
+  }
+}

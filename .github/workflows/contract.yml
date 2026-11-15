@@ -22,12 +22,26 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:contract
+      - name: Real framemark image is readable from a canvas (@external)
+        env:
+          RUN_EXTERNAL: '1'
+        run: |
+          npx playwright install --with-deps chromium
+          npx playwright test --grep @external
       - name: Open an issue on drift
         if: failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh label create contract-drift --description "V&A API response no longer matches our schemas" --color D93F0B || true
-          gh issue create --title "V&A API contract drift detected ($(date -u +%F))" \
-            --body "The daily contract check failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            --label contract-drift
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          # One open issue at a time: a persistent failure (or a framemark outage hitting the @external step) adds a
+          # comment instead of opening a new issue every day.
+          EXISTING=$(gh issue list --label contract-drift --state open --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "Still failing ($(date -u +%F)): $RUN_URL"
+          else
+            gh issue create --title "V&A contract or image check failing ($(date -u +%F))" \
+              --body "The daily check failed (live V&A schemas, or the @external framemark canvas test): $RUN_URL" \
+              --label contract-drift
+          fi

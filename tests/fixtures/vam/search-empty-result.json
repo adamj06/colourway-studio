@@ -1,0 +1,345 @@
+{
+  "info": {
+    "version": "2.0",
+    "record_count": 769,
+    "record_count_exact": true,
+    "parameters": {},
+    "page_size": 15,
+    "pages": 0,
+    "page": 100,
+    "image_count": 1421
+  },
+  "records": [],
+  "clusters": {
+    "venue": {
+      "other_terms_record_count": 0,
+      "terms": [
+        {
+          "id": "VA",
+          "value": "V&A South Kensington",
+          "count": 0,
+          "count_max_error": 0,
+          "childTerms": []
+        },
+        {
+          "id": "ES",
+          "value": "V&A East Storehouse",
+          "count": 0,
+          "count_max_error": 0,
+          "childTerms": []
+        },
+        {
+          "id": "EM",
+          "value": "V&A East Museum",
+          "count": 0,
+          "count_max_error": 0,
+          "childTerms": []
+        }
+      ]
+    },
+    "gallery": {
+      "other_terms_record_count": 119,
+      "terms": [
+        {
+          "id": "VA",
+          "value": "V&A South Kensington",
+          "count": 0,
+          "depth": 0,
+          "count_max_error": 0,
+          "childTerms": [
+            {
+              "id": "THES49171",
+              "value": "Prints & Drawings Study Room, level C",
+              "count": 246,
+              "depth": 1,
+              "count_max_error": 0,
+              "childTerms": []
+            },
+            {
+              "id": "THES49657",
+              "value": "Prints & Drawings Study Room, level E",
+              "count": 38,
+              "depth": 1,
+              "count_max_error": 0,
+              "childTerms": []
+            },
+            {
+              "id": "THES49874",
+              "value": "Ceramics, Room 139, The Curtain Foundation Gallery",
+              "count": 12,
+              "depth": 1,
+              "count_max_error": 0,
+              "childTerms": []
+            },
+            {
+              "id": "THES49213",
+              "value": "British Galleries, Room 125, Edwin and Susan Davies Gallery",
+              "count": 11,
+              "depth": 1,
+              "count_max_error": 0,
+              "childTerms": []
+            },
+            {
+              "id": "THES49658",
+              "value": "Prints & Drawings Study Room, level D",
+              "count": 10,
+              "depth": 1,
+              "count_max_error": 0,
+              "childTerms": []
+            },
+            {
+              "id": "THES49773",
+              "value": "Prints & Drawings Study Room, room 514a",
+              "count": 4,
+              "depth": 1,
+              "count_max_error": 0,
+              "childTerms": []
+            },
+            {
+              "id": "THES49814",
+              "value": "Prints & Drawings Study Room, room 405M",
+              "count": 4,
+              "depth": 1,
+              "count_max_error": 0,
+              "childTerms": []
+            }
+          ]
+        }
+      ]
+    },
+    "category": {
+      "other_terms_record_count": 4,
+      "terms": [
+        {
+          "id": "THES48885",
+          "value": "Textiles",
+          "count": 422,
+          "count_max_error": 0,
+          "childTerms": []
+        },
+        {
+          "id": "THES48878",
+          "value": "Wall coverings",
+          "count": 283,
+          "count_max_error": 0,
+          "childTerms": []
+        },
+        {
+          "id": "THES48903",
+          "value": "Prints",
+          "count": 259,
+          "count_max_error": 0,
+          "childTerms": []
+        }
+      ]
+    },
+    "object_type": {
+      "other_terms_record_count": 19,
+      "terms": [
+        {
+          "id": "Furnishing fabric",
+          "value": "Furnishing fabric",
+          "count": 323,
+          "count_max_error": 0,
+          "childTerms": []
+        },
+        {
+          "id": "Wallpaper",
+          "value": "Wallpaper",
+          "count": 250,
+          "count_max_error": 0,
+          "childTerms": []
+        },
+        {
+          "id": "Wallpaper sample",
+          "value": "Wallpaper sample",
+          "count": 22,
+          "count_max_error": 0,
+          "childTerms": []
+        }
+      ]
+    },
+    "collection": {
+      "other_terms_record_count": 0,
+      "terms": [
+        {
+          "id": "THES48601",
+          "value": "Textiles and Fashion Collection",
+          "count": 393,
+          "count_max_error": 0,
+          "childTerms": []
+        },
+        {
+          "id": "THES48595",
+          "value": "Prints, Drawings & Paintings Collection",
+          "count": 316,
+          "count_max_error": 0,
+          "childTerms": []
+        },
+        {
+          "id": "THES48594",
+          "value": "Ceramics Collection",
+          "count": 35,
+          "count_max_error": 0,
+          "childTerms": []
+        }
+      ]
+    },
+    "place": {
+      "other_terms_record_count": 0,
+      "terms": [
+        {
+          "id": "x32019",
+          "value": "Great Britain",
+          "count": 325,
+          "count_max_error": 0,
+          "childTerms": []
+        },
+        {
+          "id": "x28826",
+          "value": "England",
+          "count": 300,
+          "count_max_error": 0,
+          "childTerms": []
+        },
+        {
+          "id": "x28980",
+          "value": "London",
+          "count": 83,
+          "count_max_error": 0,
+          "childTerms": []
+        }
+      ]
+    },
+    "style": {
+      "other_terms_record_count": 0,
+      "terms": [
+        {
+          "id": "AAT21205",
+          "value": "Arts and Crafts (movement)",
+          "count": 273,
+          "count_max_error": 0,
+          "childTerms": []
+        },
+        {
+          "id": "AAT21205",
+          "value": "Arts and Crafts",
+          "count": 10,
+          "count_max_error": 0,
+          "childTerms": []
+        },
+        {
+          "id": "AAT21232",
+          "value": "Victorian",
+          "count": 5,
+          "count_max_error": 0,
+          "childTerms": []
+        }
+      ]
+    },
+    "material": {
+      "other_terms_record_count": 63,
+      "terms": [
+        {
+          "id": "x30308",
+          "value": "paper",
+          "count": 188,
+          "count_max_error": 0,
+          "childTerms": []
+        },
+        {
+          "id": "AAT14067",
+          "value": "cotton (textile)",
+          "count": 162,
+          "count_max_error": 0,
+          "childTerms": []
+        },
+        {
+          "id": "AAT243428",
+          "value": "silk (textile)",
+          "count": 87,
+          "count_max_error": 0,
+          "childTerms": []
+        }
+      ]
+    },
+    "technique": {
+      "other_terms_record_count": 11,
+      "terms": [
+        {
+          "id": "AAT53289",
+          "value": "block printing",
+          "count": 310,
+          "count_max_error": 0,
+          "childTerms": []
+        },
+        {
+          "id": "AAT53642",
+          "value": "weaving",
+          "count": 121,
+          "count_max_error": 0,
+          "childTerms": []
+        },
+        {
+          "id": "AAT53319",
+          "value": "printing",
+          "count": 104,
+          "count_max_error": 0,
+          "childTerms": []
+        }
+      ]
+    },
+    "person": {
+      "other_terms_record_count": 5,
+      "terms": [
+        {
+          "id": "A8676",
+          "value": "Morris, William",
+          "count": 484,
+          "count_max_error": 0,
+          "childTerms": []
+        },
+        {
+          "id": "A9365",
+          "value": "Dearle, John Henry",
+          "count": 113,
+          "count_max_error": 0,
+          "childTerms": []
+        },
+        {
+          "id": "A8676",
+          "value": "William Morris",
+          "count": 55,
+          "count_max_error": 0,
+          "childTerms": []
+        }
+      ]
+    },
+    "organisation": {
+      "other_terms_record_count": 0,
+      "terms": [
+        {
+          "id": "A1365",
+          "value": "Morris & Co.",
+          "count": 657,
+          "count_max_error": 0,
+          "childTerms": []
+        },
+        {
+          "id": "A9139",
+          "value": "Jeffrey & Co.",
+          "count": 168,
+          "count_max_error": 0,
+          "childTerms": []
+        },
+        {
+          "id": "A1365",
+          "value": "Morris & Co",
+          "count": 108,
+          "count_max_error": 0,
+          "childTerms": []
+        }
+      ]
+    }
+  }
+}

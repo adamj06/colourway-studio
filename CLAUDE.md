@@ -43,7 +43,7 @@ Out of scope: accounts, a database, server-side image processing, paid APIs. It 
 
 - **Plan before code.** For any feature: write acceptance criteria first, get Adam's OK, then build. Small PR-sized steps.
 - **Tests first** for `lib/`. Use the `test-writer` subagent to write failing tests from the acceptance criteria, then implement until green. Don't weaken a test to make it pass; if a test is wrong, say so.
-- **Before saying a feature is done:** run lint, typecheck and tests, then run `/review`.
+- **Before saying a feature is done:** run `npm run verify:clean` (deletes `.next`, then format:check, lint, typecheck, test, build, size, so it sees what a clean CI checkout sees), then run `/review`.
 - **Don't guess API shapes.** If you're unsure of a V&A field, fetch a real response and save it as a fixture first.
 - **Branches and PRs only.** Never push to `main`. Never deploy to production from local (Vercel deploys `main` via the GitHub integration).
 - **Log as you go.** Run `/friction` when something goes wrong or the agent needed correcting. Append to `data/build-log.json` when a feature ships (the `/feature` command does this).
@@ -51,6 +51,7 @@ Out of scope: accounts, a database, server-side image processing, paid APIs. It 
 - **Commits:** conventional commits, plus these trailers:
   - `Claude-Model: <model used for most of this change>`
   - `Feature: <build-log feature id>`
+  - `Claude-Model` is a project metadata trailer this repo requires, not an attribution line.
 
 ## Production standards
 
