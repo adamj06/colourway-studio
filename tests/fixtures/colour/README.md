@@ -30,6 +30,7 @@ No published sRGB→Lab (D65) table could be found, so the reference values come
 
 - **Conversion used:** `colour.sRGB_to_XYZ(rgb / 255, illuminant=D65)` then `colour.XYZ_to_Lab(xyz, illuminant=D65)`, where `D65 = CCS_ILLUMINANTS['CIE 1931 2 Degree Standard Observer']['D65']`, i.e. xy = (0.3127, 0.3290).
 - **Tolerance in tests:** ±0.01 per component.
+- **Known gap (dependency pinning):** only `colour-science` is pinned. Its transitive dependencies (numpy and others) are not hash-locked (`--require-hashes` was deliberately not added). The script runs by hand on a developer machine, never in CI, and its output is a JSON file that is reviewed in the PR. Use a throwaway venv (`.venv*/` is git-ignored).
 
 ## Formulas and constants cited for the implementation
 

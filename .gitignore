@@ -45,6 +45,11 @@ next-env.d.ts
 reports/
 
 
+# python venv for scripts/gen-lab-reference.py (see tests/fixtures/colour/README.md)
+.venv*/
+__pycache__/
+*.pyc
+
 # tool output
 /playwright-report/
 /test-results/

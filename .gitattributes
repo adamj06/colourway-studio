@@ -3,3 +3,5 @@
 *.png binary
 *.jpg binary
 *.ico binary
+# Hashed reference data: keep byte for byte (tests/unit/colour-fixtures-integrity.test.ts checks its SHA-256).
+tests/fixtures/colour/ciede2000testdata.txt -text

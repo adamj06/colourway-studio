@@ -153,6 +153,8 @@ const eslintConfig = defineConfig([
     'playwright-report/**',
     'test-results/**',
     '.stryker-tmp/**',
+    // Python venv for scripts/gen-lab-reference.py: third-party code, not ours to lint.
+    '.venv*/**',
   ]),
 ]);
 
