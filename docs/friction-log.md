@@ -72,7 +72,7 @@ Template:
 ## 2026-11-15 13:34: Budget was set without measuring a baseline
 
 - **Doing:** 001-tooling, wiring size-limit to the first-load JS gate in docs/quality-gates.md.
-- **What went wrong:** Budget was set without measuring a baseline; caught by the gate itself before any app code. The 150 kB cap sat below the Next 16 / React 19 floor (measured 180.35 kB, cross-checked at 180.78 kB). My own first size-limit glob also summed every chunk, which would have counted lazy-loaded chunks as first-load. I stopped and flagged it instead of changing the limit, as instructed.
+- **What went wrong:** Budget was set without measuring a baseline; caught by the gate itself before any app code. The 150 kB cap sat below the Next 16 / React 19 floor (measured 180.35 kB, cross-checked at 180.78 kB). My own first size-limit glob also summed every chunk, which would have counted lazy-loaded chunks as first-load. I flagged the problem before the proof step as instructed, and stopped instead of changing the limit.
 - **Resolved by:** Adam chose to raise the budget to 200 kB with ADR 0004; `.size-limit.mjs` now measures only the scripts `/` references.
 - **Prevention:** Measure a baseline before setting any numeric gate, and record it in the ADR. The "stop and tell me if the baseline is near or over" step in the plan is what caught this, so keep it.
 - **Caught by:** hook
@@ -104,7 +104,7 @@ Template:
 ## 2026-11-15 14:10: npm ci could not install, so every CI job was red
 
 - **Doing:** 001-tooling, adding size-limit for the bundle gate.
-- **What went wrong:** `@size-limit/file@13` needs `size-limit@13.1.1` as a peer, but `size-limit` was left at `^12`. `npm install` locally tolerated it, and `npm ci` only appeared to work because `node_modules` already existed; on a clean checkout it fails with ERESOLVE, so checks, e2e, security, contract, mutation and smoke would all have failed at install. The earlier session never ran `npm ci` or looked at CI.
+- **What went wrong:** `@size-limit/file@13` needs `size-limit@13.1.1` as a peer, but `size-limit` was left at `^12`. `npm install` locally tolerated it, and `npm ci` only appeared to work because `node_modules` already existed; on a clean checkout it fails with ERESOLVE, so checks, e2e, security, contract, mutation and smoke would all have failed at install. Nothing caught it until the code review ran `npm ci --dry-run`. The earlier session never ran `npm ci` or looked at CI.
 - **Resolved by:** Bumped `size-limit` to `^13.1.1` and regenerated the lockfile; `npm ci --dry-run` now resolves.
 - **Prevention:** After any dependency change, run `npm ci --dry-run` (or a clean install) before committing. Add it to the "before saying done" checklist. Never paper over a peer conflict with `--legacy-peer-deps`.
 - **Caught by:** reviewer agent
