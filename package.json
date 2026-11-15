@@ -2,6 +2,9 @@
   "name": "colourway-studio",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -43,7 +46,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "prettier": "^3.10.1",
-    "size-limit": "^12.1.0",
+    "size-limit": "^13.1.1",
     "tailwindcss": "4.3.3",
     "typescript": "^5",
     "typescript-eslint": "^8.72.2",

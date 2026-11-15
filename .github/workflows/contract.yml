@@ -27,6 +27,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          gh label create contract-drift --description "V&A API response no longer matches our schemas" --color D93F0B || true
           gh issue create --title "V&A API contract drift detected ($(date -u +%F))" \
             --body "The daily contract check failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            --label contract-drift || true
+            --label contract-drift
