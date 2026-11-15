@@ -13,11 +13,9 @@ export default defineConfig({
   reporter: isCI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL,
-    trace: 'on-first-retry',
-    // Lets the smoke run through Vercel Deployment Protection on previews, when the secret is configured.
-    ...(bypassSecret
-      ? { extraHTTPHeaders: { 'x-vercel-protection-bypass': bypassSecret, 'x-vercel-set-bypass-cookie': 'true' } }
-      : {}),
+    // Traces record request headers, so never record them when the bypass secret is in play.
+    // (The bypass header itself is added per-origin in tests/e2e/fixtures.ts.)
+    trace: bypassSecret ? 'off' : 'on-first-retry',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   // Locally (no BASE_URL) test a production build, like what ships. With BASE_URL we test a live deployment.
