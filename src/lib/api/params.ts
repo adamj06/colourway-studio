@@ -11,6 +11,14 @@ const pageSchema = z
   .pipe(z.number().int().min(1).max(MAX_PAGE));
 const systemNumberSchema = z.string().regex(/^O\d{1,10}$/);
 
+/**
+ * The canonical form of a search query, which is also the cache key: trimmed, lower case, whitespace runs collapsed.
+ * Without it "Indian", "indian " and "INDIAN" would each be a separate cache entry and V&A call.
+ */
+export function normaliseQuery(q: string): string {
+  return q.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
 /** Reads a query param that must appear at most once. `undefined` means absent. */
 function single(sp: URLSearchParams, name: string): { ok: true; value: string | undefined } | { ok: false } {
   const all = sp.getAll(name);
@@ -30,7 +38,7 @@ export function parseSearchParams(sp: URLSearchParams): ParseResult<{ q: string;
     rawPage.value === undefined ? ({ success: true, data: 1 } as const) : pageSchema.safeParse(rawPage.value);
   if (!page.success) return { ok: false, message: `page must be an integer from 1 to ${String(MAX_PAGE)}` };
 
-  return { ok: true, value: { q: q.data, page: page.data } };
+  return { ok: true, value: { q: normaliseQuery(q.data), page: page.data } };
 }
 
 /** Validates a V&A system number such as O78207. */

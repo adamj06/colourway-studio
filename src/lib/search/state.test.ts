@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MAX_PAGE } from '../api/query-limits';
 import type { DesignSummary, SearchResult } from '../vam/types';
 import { appendPage, hasMorePages, mergeItems } from './state';
 
@@ -53,5 +54,10 @@ describe('hasMorePages', () => {
     expect(hasMorePages({ page: 1, totalPages: 2 })).toBe(true);
     expect(hasMorePages({ page: 2, totalPages: 2 })).toBe(false);
     expect(hasMorePages({ page: 100, totalPages: 0 })).toBe(false);
+  });
+
+  it('is false at MAX_PAGE even if the V&A reports more pages, because the server would reject page MAX_PAGE + 1', () => {
+    expect(hasMorePages({ page: MAX_PAGE - 1, totalPages: MAX_PAGE + 10 })).toBe(true);
+    expect(hasMorePages({ page: MAX_PAGE, totalPages: MAX_PAGE + 10 })).toBe(false);
   });
 });

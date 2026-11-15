@@ -1,3 +1,4 @@
+import { MAX_PAGE } from '../api/query-limits';
 import type { DesignSummary, SearchResult } from '../vam/types';
 
 /** Appends a page of results to what is already shown, dropping repeats (across pages and within one page). */
@@ -15,5 +16,6 @@ export function appendPage(previous: SearchResult, next: SearchResult): SearchRe
   return { ...next, items: mergeItems(previous.items, next.items) };
 }
 
+/** False at MAX_PAGE even if the V&A has more: the server rejects pages beyond it, so "Load more" would 400. */
 export const hasMorePages = (result: Pick<SearchResult, 'page' | 'totalPages'>): boolean =>
-  result.page < result.totalPages;
+  result.page < Math.min(result.totalPages, MAX_PAGE);
