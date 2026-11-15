@@ -230,3 +230,21 @@ describe('responseSchema', () => {
     expect(okResponse('palette')).toBe(false);
   });
 });
+
+describe('responseSchema: swatch cap', () => {
+  const swatch = { hex: '#AABBCC', lab: [1, 2, 3], share: 0.1 };
+  const response = (count: number) => ({
+    type: 'palette',
+    id: 0,
+    k: 8,
+    swatches: Array.from({ length: count }, () => swatch),
+  });
+
+  it('accepts as many swatches as the largest k', () => {
+    expect(responseSchema.safeParse(response(8)).success).toBe(true);
+  });
+
+  it('rejects more swatches than the largest k', () => {
+    expect(responseSchema.safeParse(response(9)).success).toBe(false);
+  });
+});

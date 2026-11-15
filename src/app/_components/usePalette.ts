@@ -6,7 +6,7 @@ import { createPaletteClient, type PaletteClient, type PaletteRequest } from './
 
 export const DEFAULT_K = 6;
 
-export type PaletteStatus = 'waiting' | 'loading' | 'ready' | 'error';
+export type PaletteStatus = 'waiting' | 'loading' | 'ready' | 'error' | 'unavailable';
 
 export type PaletteView = {
   status: PaletteStatus;
@@ -16,6 +16,8 @@ export type PaletteView = {
   retry: () => void;
   /** Call from the image's onLoad: the worker starts once the image has decoded. */
   onImage: (img: HTMLImageElement) => void;
+  /** Call from the image's onError: there is nothing to analyse, so the panel says so instead of waiting forever. */
+  onImageError: () => void;
 };
 
 type Outcome = { tag: string; swatches: Swatch[] | null };
@@ -30,6 +32,7 @@ export function usePalette(): PaletteView {
   const [attempt, setAttempt] = useState(0);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
+  const [imageFailed, setImageFailed] = useState(false);
   const clientRef = useRef<PaletteClient | null>(null);
   const tag = `${String(attempt)}:${String(k)}`;
   const latest = useRef<PaletteRequest>({ k, tag });
@@ -54,13 +57,17 @@ export function usePalette(): PaletteView {
   const onImage = useCallback((img: HTMLImageElement) => {
     if (img.naturalWidth > 0) setImage(img);
   }, []);
+  const onImageError = useCallback(() => {
+    setImageFailed(true);
+  }, []);
   const retry = useCallback(() => {
     setAttempt((n) => n + 1);
   }, []);
 
   const answered = outcome?.tag === tag ? outcome.swatches : undefined;
   let status: PaletteStatus = image === null ? 'waiting' : 'loading';
+  if (imageFailed) status = 'unavailable';
   if (answered === null) status = 'error';
   else if (answered !== undefined) status = 'ready';
-  return { status, swatches: answered ?? [], k, setK, retry, onImage };
+  return { status, swatches: answered ?? [], k, setK, retry, onImage, onImageError };
 }

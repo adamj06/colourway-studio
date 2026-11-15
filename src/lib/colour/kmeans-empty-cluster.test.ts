@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { kmeansLab } from './kmeans';
+import { kmeansLabToEnd } from './kmeans';
 import { mulberry32 } from './prng';
 
 // Found by searching random small 3-D datasets: with this data and seed, Lloyd's moves the centres so that one of
@@ -22,7 +22,7 @@ function nearest(centroids: Float64Array, point: number[]): number {
 }
 
 describe('kmeansLab when a cluster loses all its members', () => {
-  const result = kmeansLab(POINTS, K, mulberry32(SEED));
+  const result = kmeansLabToEnd(POINTS, K, mulberry32(SEED));
 
   it('returns fewer clusters than requested', () => {
     expect(result.centroids.length / 3).toBeLessThan(K);

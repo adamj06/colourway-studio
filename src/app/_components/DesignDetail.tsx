@@ -71,13 +71,14 @@ function Loaded({ design }: { design: Design }) {
               onLoad={(event) => {
                 palette.onImage(event.currentTarget);
               }}
+              onError={palette.onImageError}
             />
           </div>
-          <PalettePanel palette={palette} />
         </div>
         <div>
           <h1 className="font-serif text-4xl leading-tight">{design.title}</h1>
           <Facts design={design} />
+          <PalettePanel palette={palette} />
           {design.description ? (
             <div className="mt-8 space-y-4 leading-relaxed whitespace-pre-line">
               {design.description.split('\n\n').map((paragraph, index) => (

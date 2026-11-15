@@ -21,8 +21,19 @@ const bitmapRequest = z.object({
   type: z.literal('analyse-bitmap'),
   id: z.number().int().nonnegative(),
   k: z.number().int().min(MIN_K).max(MAX_K),
-  bitmap: z.instanceof(ImageBitmap),
+  bitmap: z
+    .instanceof(ImageBitmap)
+    .refine((b) => b.width >= 1 && b.height >= 1 && b.width <= MAX_IMAGE_SIDE && b.height <= MAX_IMAGE_SIDE, {
+      message: 'bitmap size is outside the accepted range',
+    }),
 });
+
+/** A rejected request still owns a transferred bitmap: release it now instead of waiting for garbage collection. */
+function releaseBitmap(data: unknown): void {
+  if (typeof data === 'object' && data !== null && 'bitmap' in data && data.bitmap instanceof ImageBitmap) {
+    data.bitmap.close();
+  }
+}
 
 function post(response: PaletteResponse): void {
   scope.postMessage(response);
@@ -56,5 +67,6 @@ scope.onmessage = (event) => {
     void handleBitmap(bitmap.data);
     return;
   }
+  releaseBitmap(event.data);
   void handler.handle(event.data, post);
 };

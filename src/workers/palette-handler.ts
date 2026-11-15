@@ -47,12 +47,12 @@ export function createPaletteHandler(deps: PaletteHandlerDeps = {}): PaletteHand
 
   return {
     async handle(request, post) {
-      const ticket = ++latest;
       const parsed = requestSchema.safeParse(request);
       if (!parsed.success) {
         post({ type: 'error', id: idOf(request), message: 'Invalid palette request.' });
         return;
       }
+      const ticket = ++latest;
       try {
         await run(parsed.data, ticket, post);
       } catch {

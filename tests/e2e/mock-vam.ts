@@ -25,6 +25,8 @@ export type MockOptions = {
   page2Status?: number;
   /** PNG served for every framemark image request. Defaults to a 1x1 pixel. */
   imagePng?: Buffer;
+  /** Answer every framemark image request with this error status instead of an image. */
+  imageStatus?: number;
   /** Let framemark image requests through to the real server (only for @external tests). */
   realImages?: boolean;
 };
@@ -45,12 +47,14 @@ export async function mockVam(page: Page, options: MockOptions = {}): Promise<{ 
 
   if (!options.realImages) {
     await page.route('https://framemark.vam.ac.uk/**', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'image/png',
-        headers: { 'access-control-allow-origin': '*' },
-        body: options.imagePng ?? PIXEL_PNG,
-      }),
+      options.imageStatus && options.imageStatus >= 400
+        ? route.fulfill({ status: options.imageStatus, body: 'nope' })
+        : route.fulfill({
+            status: 200,
+            contentType: 'image/png',
+            headers: { 'access-control-allow-origin': '*' },
+            body: options.imagePng ?? PIXEL_PNG,
+          }),
     );
   }
 

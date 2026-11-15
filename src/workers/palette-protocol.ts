@@ -33,7 +33,7 @@ const swatch = z.object({
 });
 
 export const responseSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('palette'), id, k, swatches: z.array(swatch) }),
+  z.object({ type: z.literal('palette'), id, k, swatches: z.array(swatch).max(MAX_K) }),
   z.object({ type: z.literal('error'), id: id.nullable(), message: z.string() }),
 ]);
 

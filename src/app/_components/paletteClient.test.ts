@@ -10,6 +10,7 @@ class FakeWorker {
   terminated = false;
   onmessage: ((event: MessageEvent<unknown>) => void) | null = null;
   onerror: (() => void) | null = null;
+  onmessageerror: (() => void) | null = null;
 
   constructor() {
     FakeWorker.last = this;
@@ -166,5 +167,94 @@ describe('createPaletteClient', () => {
     client.dispose();
     await flush();
     expect(worker().posted).toEqual([]);
+  });
+});
+
+describe('createPaletteClient after a failure', () => {
+  it('answers later k changes with the failure at once, instead of waiting forever', async () => {
+    vi.mocked(snapshotImage).mockRejectedValue(new Error('tainted'));
+    const onResult = vi.fn();
+    const client = createPaletteClient(IMAGE, { k: 6, tag: '0:6' }, onResult);
+    await flush();
+    client.request({ k: 5, tag: '0:5' });
+
+    expect(onResult).toHaveBeenNthCalledWith(1, '0:6', null);
+    expect(onResult).toHaveBeenNthCalledWith(2, '0:5', null);
+    expect(worker().posted).toEqual([]);
+  });
+
+  it('does not post to a worker that has errored after the image was analysed', async () => {
+    const onResult = vi.fn();
+    const client = createPaletteClient(IMAGE, { k: 6, tag: '0:6' }, onResult);
+    await flush();
+    worker().onerror?.();
+    client.request({ k: 4, tag: '0:4' });
+
+    expect(onResult).toHaveBeenLastCalledWith('0:4', null);
+    expect(worker().posted).toEqual([{ type: 'analyse', id: 0, k: 6 }]);
+    expect(worker().terminated).toBe(true);
+  });
+
+  it('treats an error response with no request id as a failure of the newest request', async () => {
+    const onResult = vi.fn();
+    createPaletteClient(IMAGE, { k: 6, tag: '0:6' }, onResult);
+    await flush();
+    worker().emit({ type: 'error', id: null, message: 'bad request' });
+    expect(onResult).toHaveBeenCalledExactlyOnceWith('0:6', null);
+  });
+
+  it('treats an undeliverable message as a failure', async () => {
+    const onResult = vi.fn();
+    createPaletteClient(IMAGE, { k: 6, tag: '0:6' }, onResult);
+    await flush();
+    worker().onmessageerror?.();
+    expect(onResult).toHaveBeenCalledExactlyOnceWith('0:6', null);
+  });
+
+  it('stays silent after dispose even when a request arrives', async () => {
+    vi.mocked(snapshotImage).mockRejectedValue(new Error('tainted'));
+    const onResult = vi.fn();
+    const client = createPaletteClient(IMAGE, { k: 6, tag: '0:6' }, onResult);
+    await flush();
+    onResult.mockClear();
+    client.dispose();
+    client.request({ k: 5, tag: '0:5' });
+    expect(onResult).not.toHaveBeenCalled();
+  });
+});
+
+describe('createPaletteClient and ImageBitmap ownership', () => {
+  const bitmap = () => ({ close: vi.fn() });
+
+  it('closes a bitmap that resolved after the client was disposed', async () => {
+    const owned = bitmap();
+    vi.mocked(snapshotImage).mockResolvedValue({ kind: 'bitmap', bitmap: owned as unknown as ImageBitmap });
+    const client = createPaletteClient(IMAGE, { k: 6, tag: '0:6' }, vi.fn());
+    client.dispose();
+    await flush();
+    expect(owned.close).toHaveBeenCalledOnce();
+    expect(postSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('closes the bitmap and reports a failure when posting it throws', async () => {
+    const owned = bitmap();
+    vi.mocked(snapshotImage).mockResolvedValue({ kind: 'bitmap', bitmap: owned as unknown as ImageBitmap });
+    vi.mocked(postSnapshot).mockImplementation(() => {
+      throw new Error('DataCloneError');
+    });
+    const onResult = vi.fn();
+    createPaletteClient(IMAGE, { k: 6, tag: '0:6' }, onResult);
+    await flush();
+    expect(owned.close).toHaveBeenCalledOnce();
+    expect(onResult).toHaveBeenCalledExactlyOnceWith('0:6', null);
+  });
+
+  it('does not close a bitmap that was handed over to the worker', async () => {
+    const owned = bitmap();
+    vi.mocked(snapshotImage).mockResolvedValue({ kind: 'bitmap', bitmap: owned as unknown as ImageBitmap });
+    createPaletteClient(IMAGE, { k: 6, tag: '0:6' }, vi.fn());
+    await flush();
+    expect(owned.close).not.toHaveBeenCalled();
+    expect(postSnapshot).toHaveBeenCalledOnce();
   });
 });

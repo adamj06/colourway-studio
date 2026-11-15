@@ -95,4 +95,30 @@ test.describe('palette on the design page', () => {
     const bad = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
     expect(bad, `Serious/critical a11y violations: ${bad.map((v) => v.id).join(', ')}`).toHaveLength(0);
   });
+  test('says so, and disables the k control, when the image cannot be loaded', async ({ page }) => {
+    await mockVam(page, { imageStatus: 404 });
+    await page.goto(designUrl);
+
+    await expect(status(page)).toHaveText('The image couldn’t be loaded, so there is no palette.');
+    for (const k of [4, 5, 6, 7, 8]) await expect(page.getByRole('radio', { name: String(k) })).toBeDisabled();
+    await expect(swatches(page)).toHaveCount(0);
+
+    const results = await new AxeBuilder({ page }).analyze();
+    const bad = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+    expect(bad, `Serious/critical a11y violations: ${bad.map((v) => v.id).join(', ')}`).toHaveLength(0);
+  });
+
+  test('keeps the page heading before the palette heading', async ({ page }) => {
+    await mockVam(page, { imagePng: checkerboardPng(RED, BLUE) });
+    await page.goto(designUrl);
+    await expect(status(page)).toHaveText('Palette ready: 2 colours');
+
+    const headings = await page
+      .getByRole('heading')
+      .evaluateAll((els) => els.map((el) => `${el.tagName}:${el.textContent}`));
+    const h1 = headings.findIndex((h) => h.startsWith('H1:'));
+    const palette = headings.indexOf('H2:Palette');
+    expect(h1).toBeGreaterThanOrEqual(0);
+    expect(palette).toBeGreaterThan(h1);
+  });
 });
