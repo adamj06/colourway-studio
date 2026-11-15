@@ -1,6 +1,7 @@
 {
-  "_note": "USD per million tokens. Fill in from the official Anthropic pricing page before relying on est_usd. Keys are matched as substrings of the model id.",
-  "opus": { "input": null, "output": null, "cacheWrite": null, "cacheRead": null },
-  "sonnet": { "input": null, "output": null, "cacheWrite": null, "cacheRead": null },
-  "haiku": { "input": null, "output": null, "cacheWrite": null, "cacheRead": null }
+  "_note": "USD per million tokens, from platform.claude.com model pages (checked 2026-11-15). 5-minute cache write rates. Haiku uses the under-100K-prompt tier.",
+  "fable": { "input": 8, "output": 40, "cacheWrite": 10, "cacheRead": 0.2 },
+  "opus": { "input": 4, "output": 20, "cacheWrite": 5, "cacheRead": 0.2 },
+  "sonnet": { "input": 2, "output": 10, "cacheWrite": 2.5, "cacheRead": 0.2 },
+  "haiku": { "input": 0.1, "output": 0.5, "cacheWrite": 0.125, "cacheRead": 0.01 }
 }
