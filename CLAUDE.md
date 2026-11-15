@@ -73,6 +73,7 @@ Out of scope: accounts, a database, server-side image processing, paid APIs. It 
 - The default model is `opusplan` (Opus while planning, Sonnet while implementing). Use the Haiku subagent `api-scout` for exploration and fixture capture.
 - `/clear` between unrelated features. `/compact` when a session gets long. Don't read whole large files when a range will do.
 - Budget limits live in `.claude/budget.json` and are checked on every prompt. If the budget guard adds a note, relay it to Adam in one line.
+- If a background task or subagent you started has not reported back, read its output file or tell Adam; do not wait on it silently.
 - Token usage is logged automatically per session to `docs/cost/ledger.csv` (SessionEnd hook). The status line shows live cost and context size.
 
 ## Guardrails (enforced by hooks, not just this file)

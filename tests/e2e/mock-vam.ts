@@ -23,6 +23,12 @@ export type MockOptions = {
   /** Hold the page-2 answer back, to test a "load more" that is still in flight when the query changes. */
   page2DelayMs?: number;
   page2Status?: number;
+  /** PNG served for every framemark image request. Defaults to a 1x1 pixel. */
+  imagePng?: Buffer;
+  /** Answer every framemark image request with this error status instead of an image. */
+  imageStatus?: number;
+  /** Let framemark image requests through to the real server (only for @external tests). */
+  realImages?: boolean;
 };
 
 // Page 2 repeats the first design (the real V&A can shift items between pages) and adds one new design.
@@ -39,14 +45,18 @@ async function respondPageTwo(route: Route, delayMs: number, status: number) {
 export async function mockVam(page: Page, options: MockOptions = {}): Promise<{ searchUrls: string[] }> {
   const searchUrls: string[] = [];
 
-  await page.route('https://framemark.vam.ac.uk/**', (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: 'image/png',
-      headers: { 'access-control-allow-origin': '*' },
-      body: PIXEL_PNG,
-    }),
-  );
+  if (!options.realImages) {
+    await page.route('https://framemark.vam.ac.uk/**', (route) =>
+      options.imageStatus && options.imageStatus >= 400
+        ? route.fulfill({ status: options.imageStatus, body: 'nope' })
+        : route.fulfill({
+            status: 200,
+            contentType: 'image/png',
+            headers: { 'access-control-allow-origin': '*' },
+            body: options.imagePng ?? PIXEL_PNG,
+          }),
+    );
+  }
 
   await page.route('**/api/vam/search**', (route) => {
     searchUrls.push(route.request().url());

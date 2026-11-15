@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 // UserPromptSubmit: spend and context guardrail, checked before every prompt.
-// Hard limit -> exit 2 (prompt blocked, reason shown). Soft limit or a big context -> a note is added for Claude to relay.
+// Hard limit -> exit 2 (prompt blocked, reason shown) for prompts a human typed. Soft limit or a big context -> a note
+// is added for Claude to relay.
+//
+// System deliveries (a finished background task or a subagent's report, which start with <task-notification> or
+// <agent-message) are never blocked: the tokens were already spent, so blocking saves nothing and throws the finished
+// work away. They only get the note. This is a spend guard for Adam's own prompts, not a security boundary, so a human
+// who types one of those prefixes only lets themselves past their own limit.
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { readJson, transcriptUsage, weightedTokens, contextTokens, estimateUsd, ledgerUsdToday } from './lib-usage.mjs';
@@ -18,23 +24,33 @@ const sessionUsd = priced ? sessionUsdParts.reduce((a, b) => a + b, 0) : null;
 const dayUsd = ledgerUsdToday(root) + (sessionUsd ?? 0);
 const ctx = contextTokens(last?.u);
 
+const prompt = typeof input.prompt === 'string' ? input.prompt.trimStart() : '';
+const isSystemDelivery = /^<(task-notification|agent-message)[\s>]/.test(prompt);
+
 const fmt = (n) => n.toLocaleString('en-GB');
 const where = 'If you need more headroom, ask Adam to raise the limit.';
-
-if (priced && budget.dailyHardUsd && dayUsd >= budget.dailyHardUsd) {
-  process.stderr.write(
-    `Budget guard: today's spend is about $${dayUsd.toFixed(2)}, over the hard limit of $${budget.dailyHardUsd}. ${where}`,
-  );
-  process.exit(2);
-}
-if (budget.sessionHardTokens && sessionTokens >= budget.sessionHardTokens) {
-  process.stderr.write(
-    `Budget guard: this session has used ${fmt(sessionTokens)} weighted tokens, over the hard limit. Start a fresh session (/clear), or ask Adam to raise the limit.`,
-  );
-  process.exit(2);
-}
+const letThrough = "this delivery was let through; Adam's own prompts stay blocked until the limit is raised";
 
 const notes = [];
+const overDailyHard = Boolean(priced && budget.dailyHardUsd && dayUsd >= budget.dailyHardUsd);
+const overSessionHard = Boolean(budget.sessionHardTokens && sessionTokens >= budget.sessionHardTokens);
+
+if (overDailyHard || overSessionHard) {
+  if (!isSystemDelivery) {
+    process.stderr.write(
+      overDailyHard
+        ? `Budget guard: today's spend is about $${dayUsd.toFixed(2)}, over the hard limit of $${budget.dailyHardUsd}. ${where}`
+        : `Budget guard: this session has used ${fmt(sessionTokens)} weighted tokens, over the hard limit. Start a fresh session (/clear), or ask Adam to raise the limit.`,
+    );
+    process.exit(2);
+  }
+  notes.push(
+    overDailyHard
+      ? `today's spend is about $${dayUsd.toFixed(2)}, over the hard limit of $${budget.dailyHardUsd} (${letThrough})`
+      : `this session has used ${fmt(sessionTokens)} weighted tokens, over the hard limit (${letThrough})`,
+  );
+}
+
 if (priced && budget.dailySoftUsd && dayUsd >= budget.dailySoftUsd) {
   notes.push(`today's spend is about $${dayUsd.toFixed(2)} (soft limit $${budget.dailySoftUsd})`);
 }

@@ -1,0 +1,152 @@
+import AxeBuilder from '@axe-core/playwright';
+import type { Page } from '@playwright/test';
+import { expect, test } from './fixtures';
+import { indianDesign, mockVam } from './mock-vam';
+import { bandsPng, checkerboardPng } from './png';
+
+const RED = '#C0392B';
+const BLUE = '#2E86C1';
+const FIVE = [RED, BLUE, '#27AE60', '#F1C40F', '#8E44AD'] as const;
+
+const designUrl = `/design/${indianDesign.systemNumber}`;
+const status = (page: Page) => page.getByRole('status').filter({ hasText: /palette|extracting|copied/i });
+const swatches = (page: Page) => page.getByRole('button', { name: /^Colour \d+ of \d+, #[0-9A-F]{6}, / });
+const kOption = (page: Page, k: number) => page.locator('label', { hasText: new RegExp(`^${String(k)}$`) });
+
+test.describe('palette on the design page', () => {
+  test('a 2-colour checkerboard gives exactly those 2 swatches at 50% @smoke', async ({ page }) => {
+    await mockVam(page, { imagePng: checkerboardPng(RED, BLUE) });
+    await page.goto(designUrl);
+
+    await expect(status(page)).toHaveText('Palette ready: 2 colours');
+    await expect(swatches(page)).toHaveCount(2);
+    const labels = await swatches(page).evaluateAll((els) => els.map((el) => el.getAttribute('aria-label')));
+    expect(labels.sort()).toEqual([
+      `Colour 1 of 2, ${BLUE.toUpperCase()}, 50% of the design`,
+      `Colour 2 of 2, ${RED.toUpperCase()}, 50% of the design`,
+    ]);
+  });
+
+  test('defaults to 6 colours and changing k updates the palette', async ({ page }) => {
+    await mockVam(page, { imagePng: bandsPng(FIVE) });
+    await page.goto(designUrl);
+
+    await expect(page.getByRole('radio', { name: '6' })).toBeChecked();
+    await expect(status(page)).toHaveText('Palette ready: 5 colours');
+
+    await kOption(page, 4).click();
+    await expect(status(page)).toHaveText('Palette ready: 4 colours');
+    await expect(swatches(page)).toHaveCount(4);
+
+    await kOption(page, 8).click();
+    await expect(status(page)).toHaveText('Palette ready: 5 colours');
+    await expect(swatches(page)).toHaveCount(5);
+  });
+
+  test('rapid k changes end on the last choice only', async ({ page }) => {
+    await mockVam(page, { imagePng: bandsPng(FIVE) });
+    await page.goto(designUrl);
+    await expect(status(page)).toHaveText('Palette ready: 5 colours');
+
+    await kOption(page, 8).click();
+    await kOption(page, 5).click();
+    await kOption(page, 4).click();
+
+    await expect(status(page)).toHaveText('Palette ready: 4 colours');
+    await page.waitForTimeout(400); // a late answer for an older k would flip this
+    await expect(swatches(page)).toHaveCount(4);
+    await expect(status(page)).toHaveText('Palette ready: 4 colours');
+  });
+
+  test('a swatch copies its hex by keyboard and announces it', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await mockVam(page, { imagePng: checkerboardPng(RED, BLUE) });
+    await page.goto(designUrl);
+    await expect(status(page)).toHaveText('Palette ready: 2 colours');
+
+    const first = swatches(page).first();
+    const hex = /#[0-9A-F]{6}/.exec((await first.getAttribute('aria-label')) ?? '')?.[0];
+    expect(hex).toBeDefined();
+    await first.focus();
+    await page.keyboard.press('Enter');
+
+    await expect(status(page)).toHaveText(`Copied ${hex ?? ''}`);
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(hex);
+  });
+
+  test('k can be changed with the keyboard', async ({ page }) => {
+    await mockVam(page, { imagePng: bandsPng(FIVE) });
+    await page.goto(designUrl);
+    await expect(status(page)).toHaveText('Palette ready: 5 colours');
+
+    await page.getByRole('radio', { name: '6' }).focus();
+    await page.keyboard.press('ArrowLeft');
+    await page.keyboard.press('ArrowLeft');
+    await expect(page.getByRole('radio', { name: '4' })).toBeChecked();
+    await expect(status(page)).toHaveText('Palette ready: 4 colours');
+  });
+
+  test('has no serious or critical accessibility violations with the palette showing', async ({ page }) => {
+    await mockVam(page, { imagePng: bandsPng(FIVE) });
+    await page.goto(designUrl);
+    await expect(status(page)).toHaveText('Palette ready: 5 colours');
+
+    const results = await new AxeBuilder({ page }).analyze();
+    const bad = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+    expect(bad, `Serious/critical a11y violations: ${bad.map((v) => v.id).join(', ')}`).toHaveLength(0);
+  });
+  test('says so, and disables the k control, when the image cannot be loaded', async ({ page }) => {
+    await mockVam(page, { imageStatus: 404 });
+    await page.goto(designUrl);
+
+    await expect(status(page)).toHaveText('The image couldn’t be loaded, so there is no palette.');
+    for (const k of [4, 5, 6, 7, 8]) await expect(page.getByRole('radio', { name: String(k) })).toBeDisabled();
+    await expect(swatches(page)).toHaveCount(0);
+
+    const results = await new AxeBuilder({ page }).analyze();
+    const bad = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+    expect(bad, `Serious/critical a11y violations: ${bad.map((v) => v.id).join(', ')}`).toHaveLength(0);
+  });
+
+  test('keeps the page heading before the palette heading', async ({ page }) => {
+    await mockVam(page, { imagePng: checkerboardPng(RED, BLUE) });
+    await page.goto(designUrl);
+    await expect(status(page)).toHaveText('Palette ready: 2 colours');
+
+    const headings = await page
+      .getByRole('heading')
+      .evaluateAll((els) => els.map((el) => `${el.tagName}:${el.textContent}`));
+    const h1 = headings.findIndex((h) => h.startsWith('H1:'));
+    const palette = headings.indexOf('H2:Palette');
+    expect(h1).toBeGreaterThanOrEqual(0);
+    expect(palette).toBeGreaterThan(h1);
+  });
+  test('shows the friendly error, then recovers on retry, when the worker script cannot load', async ({ page }) => {
+    await mockVam(page, { imagePng: checkerboardPng(RED, BLUE) });
+    // Make `new Worker()` fail for real by aborting the worker's own bootstrap script (Turbopack names it
+    // turbopack-worker-<hash>.js). If a Next upgrade renames it, the "worker loaded" assertion below fails loudly.
+    let blockWorker = true;
+    const workerScripts: string[] = [];
+    await page.route('**/turbopack-worker-*.js', (route) => {
+      workerScripts.push(route.request().url());
+      return blockWorker ? route.abort() : route.continue();
+    });
+    await page.goto(designUrl);
+
+    const alert = page.getByRole('alert').filter({ hasText: /couldn’t read the colours/ });
+    await expect(alert).toBeVisible();
+    expect(workerScripts.length, 'the worker script request was intercepted').toBeGreaterThan(0);
+    await expect(alert.getByRole('button', { name: 'Try again' })).toBeVisible();
+    await expect(swatches(page)).toHaveCount(0);
+
+    const results = await new AxeBuilder({ page }).analyze();
+    const bad = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+    expect(bad, `Serious/critical a11y violations: ${bad.map((v) => v.id).join(', ')}`).toHaveLength(0);
+
+    blockWorker = false;
+    await alert.getByRole('button', { name: 'Try again' }).click();
+    await expect(page.getByRole('heading', { name: 'Palette' })).toBeFocused();
+    await expect(status(page)).toHaveText('Palette ready: 2 colours');
+    await expect(alert).toHaveCount(0);
+  });
+});

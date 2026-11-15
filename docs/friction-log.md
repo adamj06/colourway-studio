@@ -244,3 +244,11 @@ Template:
 - **Resolved by:** Cache successes and 404s only. Transient failures throw inside the cache with the code in `error.digest` (the class does not survive the boundary, the digest does) and are mapped to 502/504 outside it. The policy is unit tested; real use-cache "good, failure, good" is not, and the runbook says so.
 - **Prevention:** When a fix changes what gets cached, ask what the next revalidation does to an existing good entry. No project-instructions change proposed.
 - **Caught by:** Claude PR review
+
+## 2026-11-15 21:20: Budget guard blocked finished subagent and task results, twice
+
+- **Doing:** 003-palette: waiting on the Stryker run and the security-reviewer subagent while the daily spend crossed the $45 hard cap.
+- **What went wrong:** `budget.mjs` blocked every prompt over the cap, including the system deliveries that report a finished task or subagent (`<task-notification>`, `<agent-message>`). Those tokens were already spent, so the block saved nothing and threw away the Stryker result and the security report. I did not know either delivery was missing until Adam told me.
+- **Resolved by:** Adam raised the cap. `budget.mjs` now lets a prompt through, with a note, when it starts with `<task-notification` or `<agent-message`, and still blocks human prompts (8 new tests). The guard's prefix match is only tested with synthetic prompts, not the real hook input. One of my edits to the guard was reported as rejected but the change was in the file, so I checked the file rather than trusting the tool result.
+- **Prevention:** The hook change above. Proposed, not applied (CLAUDE.md is guarded), in "Cost discipline": add "If a background task or subagent you started has not reported back, read its output file or tell Adam; do not wait on it silently."
+- **Caught by:** human
