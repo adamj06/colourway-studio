@@ -31,9 +31,9 @@ function transcript(root, inputTokensPerMsg, count) {
   writeFileSync(p, lines.join('\n'));
   return p;
 }
-const run = (root, transcript_path) =>
+const run = (root, transcript_path, prompt) =>
   spawnSync(process.execPath, [path.join(root, '.claude/hooks/budget.mjs')], {
-    input: JSON.stringify({ transcript_path }),
+    input: JSON.stringify({ transcript_path, prompt }),
     encoding: 'utf8',
     env: { ...process.env, CLAUDE_PROJECT_DIR: root },
   });
@@ -125,4 +125,57 @@ test('the block message says to ask Adam, not to edit the file', () => {
   assert.equal(r.status, 2);
   assert.match(r.stderr, /ask Adam to raise the limit/);
   assert.doesNotMatch(r.stderr, /Edit \.claude\/budget\.json/);
+});
+
+// System deliveries (a finished background task, a subagent's report) are never blocked: the tokens are already spent,
+// so blocking only throws the finished work away. A prompt a human typed is still blocked.
+const overSession = (root) => usageTranscript(root, { input_tokens: 11000000 }, 1);
+const overDaily = (root) => transcript(root, 400000, 2); // ~ $2.43 with the pricing below
+const pricedProject = () =>
+  project({
+    budget: { ...base, sessionHardTokens: 1e12 },
+    pricing: { sonnet: { input: 3, output: 15, cacheWrite: 3.75, cacheRead: 0.3 } },
+  });
+
+test('a human prompt over the session hard limit is still blocked', () => {
+  const root = project({ budget: limits });
+  assert.equal(run(root, overSession(root), 'please carry on').status, 2);
+});
+test('a human prompt over the daily hard limit is still blocked', () => {
+  const root = pricedProject();
+  assert.equal(run(root, overDaily(root), 'please carry on').status, 2);
+});
+test('a <task-notification> delivery over the session hard limit is let through with a note', () => {
+  const root = project({ budget: limits });
+  const r = run(root, overSession(root), '<task-notification>\n<task-id>b1</task-id>\n</task-notification>');
+  assert.equal(r.status, 0);
+  assert.equal(r.stderr, '');
+  assert.match(r.stdout, /\[budget-guard\]/);
+  assert.match(r.stdout, /over the hard limit/);
+  assert.match(r.stdout, /let through/);
+});
+test('an <agent-message> delivery over the daily hard limit is let through with a note', () => {
+  const root = pricedProject();
+  const r = run(root, overDaily(root), '<agent-message from="a1">done</agent-message>');
+  assert.equal(r.status, 0);
+  assert.match(r.stdout, /over the hard limit of \$2/);
+  assert.match(r.stdout, /let through/);
+});
+test('leading whitespace before the delivery tag does not turn it back into a human prompt', () => {
+  const root = project({ budget: limits });
+  assert.equal(run(root, overSession(root), '\n  <task-notification>x</task-notification>').status, 0);
+});
+test('a prompt that only mentions the tag later in its text is still a human prompt', () => {
+  const root = project({ budget: limits });
+  assert.equal(run(root, overSession(root), 'what does <task-notification> mean?').status, 2);
+});
+test('a tag that merely starts with the same letters is not a delivery', () => {
+  const root = project({ budget: limits });
+  assert.equal(run(root, overSession(root), '<task-notifications-extra>').status, 2);
+});
+test('a delivery under the limits is quiet, like any prompt', () => {
+  const root = project({ budget: base });
+  const r = run(root, transcript(root, 1000, 3), '<task-notification>x</task-notification>');
+  assert.equal(r.status, 0);
+  assert.equal(r.stdout, '');
 });
