@@ -38,7 +38,9 @@
       "Adam chose the scoped ESLint override for the one plain <img> wrapper after the brief (plain <img>, not next/image) collided with the no-img-element rule and the ban on eslint-disable.",
       "The guard hook blocked me when I tried to edit docs/quality-gates.md and the workflow files through a shell script; I redid them with the Edit tool so Adam was asked.",
       "Agent mistakes that were self-caught, not human-caught: I wrote an eslint-disable comment twice (CLAUDE.md forbids it) and removed both; I let the plan pre-assume a last-good cache that the docs show does not persist on serverless; and my own new race-condition e2e test found a stuck \"Loading…\" button in the search hook.",
-      "The review fixes were not prompted by Adam: the independent reviewers found the cache-boundary 500 bug and the others."
+      "The review fixes were not prompted by Adam: the independent reviewers found the cache-boundary 500 bug and the others.",
+      "Adam caught that I had dropped the Claude-Model trailer from later commits after reading a session instruction about attribution lines as covering it. He clarified in CLAUDE.md that it is a required project metadata trailer, and had me add it back to the four unpushed commits that lacked it.",
+      "Adam asked for the no-inline-disable rule to be enforced mechanically (linterOptions.noInlineConfig) after I wrote two eslint-disable comments despite the CLAUDE.md ban, and asked for the six friction entries for this feature."
     ],
     "reviewFindingsFixed": 17,
     "prUrl": null
