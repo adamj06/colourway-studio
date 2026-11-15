@@ -21,6 +21,11 @@
     "prepare": "husky",
     "verify:clean": "node scripts/verify-clean.mjs"
   },
+  "overrides": {
+    "typed-rest-client": {
+      "qs": "6.17.1"
+    }
+  },
   "dependencies": {
     "next": "16.4.6",
     "react": "19.3.0",
