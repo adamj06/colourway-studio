@@ -9,5 +9,21 @@
     "humanInterventions": ["Adam chose the problem, the stack (Next.js on Vercel) and the guardrail set."],
     "reviewFindingsFixed": 0,
     "prUrl": null
+  },
+  {
+    "id": "001-tooling",
+    "title": "Quality tooling and gates",
+    "date": "2026-11-15",
+    "summary": "Wired the quality gates from docs/quality-gates.md so they fail for real: strict type-checked ESLint (complexity, a11y, no process.env outside src/env.ts), a zod-validated env, static security headers and CSP (ADR 0003), Vitest coverage thresholds, Stryker mutation scoped to src/lib/colour, Playwright with axe and header smoke tests, a first-load JS budget with size-limit (ADR 0004), commitlint and husky, a guard hook that asks before the agent edits its own guardrails, and a weighted-token budget guard. Every gate was broken on purpose to prove it fails. Honest notes: (1) the size budget was first set to 150 kB without measuring a baseline; the real Next 16 and React 19 floor was 180.35 kB, so the gate itself exposed it and it became 200 kB with ADR 0004. (2) The CORS assumption for canvas image access was caught at plan review, before any image code, and is still an open spike recorded in ADR 0002 and the CSP. (3) The budget guard was miscalibrated: it counted cache reads at full weight and blocked a session at 10.3M mostly-cached tokens; it now counts weighted tokens (cache reads at 0.1) with tests, and the block message tells the agent to ask Adam. (4) CI could not install at all: size-limit ^12 against @size-limit/file 13 failed npm ci with a peer conflict, so every job was red until the code review caught it. Two independent reviews ran twice; the second pass found that my guard rewrite had regressed 15 shell write forms the earlier guard blocked, which is fixed with tests. The regex guard is documented as a tripwire with its known gaps listed, and several Should items from the second review (injectable trust check for the bypass-secret test, project-specific Vercel host pattern, SHA-pinning all actions in the smoke job, PowerShell matcher, verifying hook ask in bypass mode) are deliberately left open and listed in the PR.",
+    "models": ["claude-sonnet-5-5"],
+    "subagents": ["code-reviewer", "security-reviewer"],
+    "humanInterventions": [
+      "Adam raised the size budget to 200 kB after the baseline was measured.",
+      "Adam's plan review caught the CORS assumption before any image code was written.",
+      "Adam spotted the budget guard blocking on cache reads and asked for weighted tokens.",
+      "Adam reduced the guard-bypass scope to a 20-minute time box and chose the tripwire framing, and chose docs-only handling for the smoke secret and pinning only the two token-holding actions."
+    ],
+    "reviewFindingsFixed": 28,
+    "prUrl": null
   }
 ]
