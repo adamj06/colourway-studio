@@ -121,4 +121,32 @@ test.describe('palette on the design page', () => {
     expect(h1).toBeGreaterThanOrEqual(0);
     expect(palette).toBeGreaterThan(h1);
   });
+  test('shows the friendly error, then recovers on retry, when the worker script cannot load', async ({ page }) => {
+    await mockVam(page, { imagePng: checkerboardPng(RED, BLUE) });
+    // Make `new Worker()` fail for real by aborting the worker's own bootstrap script (Turbopack names it
+    // turbopack-worker-<hash>.js). If a Next upgrade renames it, the "worker loaded" assertion below fails loudly.
+    let blockWorker = true;
+    const workerScripts: string[] = [];
+    await page.route('**/turbopack-worker-*.js', (route) => {
+      workerScripts.push(route.request().url());
+      return blockWorker ? route.abort() : route.continue();
+    });
+    await page.goto(designUrl);
+
+    const alert = page.getByRole('alert').filter({ hasText: /couldn’t read the colours/ });
+    await expect(alert).toBeVisible();
+    expect(workerScripts.length, 'the worker script request was intercepted').toBeGreaterThan(0);
+    await expect(alert.getByRole('button', { name: 'Try again' })).toBeVisible();
+    await expect(swatches(page)).toHaveCount(0);
+
+    const results = await new AxeBuilder({ page }).analyze();
+    const bad = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+    expect(bad, `Serious/critical a11y violations: ${bad.map((v) => v.id).join(', ')}`).toHaveLength(0);
+
+    blockWorker = false;
+    await alert.getByRole('button', { name: 'Try again' }).click();
+    await expect(page.getByRole('heading', { name: 'Palette' })).toBeFocused();
+    await expect(status(page)).toHaveText('Palette ready: 2 colours');
+    await expect(alert).toHaveCount(0);
+  });
 });
