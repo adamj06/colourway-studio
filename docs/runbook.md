@@ -41,6 +41,8 @@ Only promote a previous **production** deployment. Security headers are computed
 
 ## Quality commands
 
+**Run `npm run verify:clean` before pushing.** It deletes `.next` and then runs `format:check`, `lint`, `typecheck`, `test`, `build` and `size` in that order, stopping at the first failure. That is what a clean CI checkout sees. Generated files left over from earlier local builds (Next's route types in `.next/types`) can hide failures that only appear in CI: this caused the `LayoutProps` typecheck failure in 001 and the "error typed value" lint failures in 002. `lint` and `typecheck` both run `next typegen` first so they no longer depend on a previous build.
+
 | Command                                                       | What it checks                                                                                                                                   |
 | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `npm run lint` / `npm run format:check` / `npm run typecheck` | ESLint (zero warnings), Prettier, `tsc --noEmit`                                                                                                 |
