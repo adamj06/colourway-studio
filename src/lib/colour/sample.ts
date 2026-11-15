@@ -1,3 +1,4 @@
+import { at } from './at';
 import { rgbToLab } from './convert';
 import type { PixelBuffer } from './types';
 
@@ -6,7 +7,7 @@ export const MAX_SAMPLES = 40_000;
 const MIN_ALPHA = 128;
 
 function isOpaque(data: Uint8ClampedArray, pixel: number): boolean {
-  return (data[pixel * 4 + 3] ?? 0) >= MIN_ALPHA;
+  return at(data, pixel * 4 + 3) >= MIN_ALPHA;
 }
 
 /**
@@ -26,7 +27,7 @@ export function sampleLabPixels(pixels: PixelBuffer, maxSamples: number = MAX_SA
   for (let p = 0; p < total; p++) {
     if (!isOpaque(data, p)) continue;
     if (seen % stride === 0) {
-      const lab = rgbToLab([data[p * 4] ?? 0, data[p * 4 + 1] ?? 0, data[p * 4 + 2] ?? 0]);
+      const lab = rgbToLab([at(data, p * 4), at(data, p * 4 + 1), at(data, p * 4 + 2)]);
       out.set(lab, written * 3);
       written++;
     }

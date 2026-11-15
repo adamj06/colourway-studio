@@ -1,5 +1,6 @@
+import { at } from './at';
 import { labToRgb, rgbToHex } from './convert';
-import { kmeansLab } from './kmeans';
+import { kmeansLab, kmeansLabToEnd, type KmeansResult } from './kmeans';
 import { mergeClusters, type Cluster } from './merge';
 import { mulberry32 } from './prng';
 import { sampleLabPixels } from './sample';
@@ -18,7 +19,7 @@ function assertValidK(k: number): void {
 
 function clustersOf(centroids: Float64Array, counts: number[]): Cluster[] {
   return counts.map((count, c) => ({
-    lab: [centroids[c * 3] ?? 0, centroids[c * 3 + 1] ?? 0, centroids[c * 3 + 2] ?? 0],
+    lab: [at(centroids, c * 3), at(centroids, c * 3 + 1), at(centroids, c * 3 + 2)],
     count,
   }));
 }
@@ -27,7 +28,11 @@ function toSwatches(clusters: Cluster[]): Swatch[] {
   const total = clusters.reduce((sum, c) => sum + c.count, 0);
   return clusters
     .map((c) => ({ hex: rgbToHex(labToRgb(c.lab)), lab: c.lab, share: c.count / total }))
-    .sort((a, b) => b.share - a.share || (a.hex < b.hex ? -1 : a.hex > b.hex ? 1 : 0));
+    .sort((a, b) => b.share - a.share || (a.hex < b.hex ? -1 : 1));
+}
+
+function paletteOf(result: KmeansResult): Swatch[] {
+  return toSwatches(mergeClusters(clustersOf(result.centroids, result.counts), MERGE_DELTA_E));
 }
 
 /** Palette from already-sampled Lab values. Returns null when `shouldStop` abandons the run. */
@@ -35,11 +40,11 @@ export function extractPaletteFromSamples(samples: Float64Array, options: Sample
   const { k, seed = DEFAULT_SEED, shouldStop } = options;
   assertValidK(k);
   const result = kmeansLab(samples, k, mulberry32(seed), shouldStop ? { shouldStop } : {});
-  if (result === null) return null;
-  return toSwatches(mergeClusters(clustersOf(result.centroids, result.counts), MERGE_DELTA_E));
+  return result === null ? null : paletteOf(result);
 }
 
 export function extractPalette(pixels: PixelBuffer, options: PaletteOptions): Swatch[] {
-  assertValidK(options.k);
-  return extractPaletteFromSamples(sampleLabPixels(pixels), options) ?? [];
+  const { k, seed = DEFAULT_SEED } = options;
+  assertValidK(k);
+  return paletteOf(kmeansLabToEnd(sampleLabPixels(pixels), k, mulberry32(seed)));
 }

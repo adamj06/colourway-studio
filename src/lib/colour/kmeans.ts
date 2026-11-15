@@ -1,6 +1,8 @@
 // k-means in CIELAB with k-means++ seeding and an injected PRNG, so results are deterministic.
 // Samples are a flat [L, a, b, L, a, b, ...] array. Distances are Euclidean in Lab (the CIE76 difference).
 
+import { at } from './at';
+
 export const MAX_ITERATIONS = 20;
 
 export type KmeansOptions = {
@@ -12,23 +14,27 @@ export type KmeansOptions = {
 export type KmeansResult = { centroids: Float64Array; counts: number[]; iterations: number };
 
 function distanceSquared(samples: Float64Array, i: number, centres: Float64Array, c: number): number {
-  const dl = (samples[i * 3] ?? 0) - (centres[c * 3] ?? 0);
-  const da = (samples[i * 3 + 1] ?? 0) - (centres[c * 3 + 1] ?? 0);
-  const db = (samples[i * 3 + 2] ?? 0) - (centres[c * 3 + 2] ?? 0);
+  const dl = at(samples, i * 3) - at(centres, c * 3);
+  const da = at(samples, i * 3 + 1) - at(centres, c * 3 + 1);
+  const db = at(samples, i * 3 + 2) - at(centres, c * 3 + 2);
   return dl * dl + da * da + db * db;
 }
 
-/** Index of the first sample whose running total of weights exceeds `target` (the last positive weight on rounding). */
+/**
+ * Index of the first sample whose running total of weights exceeds `target`. If rounding leaves the total just short
+ * of `target`, the last sample with a positive weight is returned.
+ */
 function pickWeighted(weights: Float64Array, target: number): number {
   let running = 0;
-  let lastPositive = 0;
+  let chosen = 0;
   for (let i = 0; i < weights.length; i++) {
-    const w = weights[i] ?? 0;
-    if (w > 0) lastPositive = i;
+    const w = at(weights, i);
+    if (w <= 0) continue;
+    chosen = i;
     running += w;
-    if (running > target) return i;
+    if (running > target) break;
   }
-  return lastPositive;
+  return chosen;
 }
 
 /** k-means++: each next centre is a sample chosen with probability proportional to its squared distance to the nearest centre. */
@@ -44,8 +50,8 @@ function seedPlusPlus(samples: Float64Array, k: number, rng: () => number): Floa
     if (count === k) break;
     let total = 0;
     for (let i = 0; i < n; i++) {
-      nearest[i] = Math.min(nearest[i] ?? 0, distanceSquared(samples, i, centres, count - 1));
-      total += nearest[i] ?? 0;
+      nearest[i] = Math.min(at(nearest, i), distanceSquared(samples, i, centres, count - 1));
+      total += at(nearest, i);
     }
     // Every remaining sample coincides with a centre: there are fewer than k distinct colours.
     if (total === 0) break;
@@ -89,9 +95,9 @@ function accumulate(
   const sums = new Float64Array(k * 3);
   const counts = new Array<number>(k).fill(0);
   for (let i = 0; i < assignments.length; i++) {
-    const c = assignments[i] ?? 0;
-    counts[c] = (counts[c] ?? 0) + 1;
-    for (let d = 0; d < 3; d++) sums[c * 3 + d] = (sums[c * 3 + d] ?? 0) + (samples[i * 3 + d] ?? 0);
+    const c = at(assignments, i);
+    counts[c] = at(counts, c) + 1;
+    for (let d = 0; d < 3; d++) sums[c * 3 + d] = at(sums, c * 3 + d) + at(samples, i * 3 + d);
   }
   return { sums, counts };
 }
@@ -101,7 +107,7 @@ function updateCentres(samples: Float64Array, assignments: Int32Array, centres: 
   const { sums, counts } = accumulate(samples, assignments, centres.length / 3);
   counts.forEach((members, c) => {
     if (members === 0) return;
-    for (let d = 0; d < 3; d++) centres[c * 3 + d] = (sums[c * 3 + d] ?? 0) / members;
+    for (let d = 0; d < 3; d++) centres[c * 3 + d] = at(sums, c * 3 + d) / members;
   });
   return counts;
 }
@@ -113,7 +119,7 @@ function dropEmpty(centres: Float64Array, counts: number[]): { centroids: Float6
   kept.forEach((c, index) => {
     centroids.set(centres.subarray(c * 3, c * 3 + 3), index * 3);
   });
-  return { centroids, counts: kept.map((c) => counts[c] ?? 0) };
+  return { centroids, counts: kept.map((c) => at(counts, c)) };
 }
 
 export function kmeansLab(
@@ -138,4 +144,14 @@ export function kmeansLab(
     if (!changed) break;
   }
   return { ...dropEmpty(centres, counts), iterations };
+}
+
+/** For runs that can't be abandoned (no `shouldStop`): the result is never null. */
+export function kmeansLabToEnd(
+  samples: Float64Array,
+  k: number,
+  rng: () => number,
+  options: Omit<KmeansOptions, 'shouldStop'> = {},
+): KmeansResult {
+  return kmeansLab(samples, k, rng, options) as KmeansResult;
 }

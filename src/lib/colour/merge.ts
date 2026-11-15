@@ -1,3 +1,4 @@
+import { at } from './at';
 import { deltaE2000 } from './delta-e';
 import type { Lab } from './types';
 
@@ -9,10 +10,7 @@ function closestPair(clusters: readonly Cluster[]): Pair | null {
   let best: Pair | null = null;
   for (let i = 0; i < clusters.length; i++) {
     for (let j = i + 1; j < clusters.length; j++) {
-      const a = clusters[i];
-      const b = clusters[j];
-      if (!a || !b) continue;
-      const distance = deltaE2000(a.lab, b.lab);
+      const distance = deltaE2000(at(clusters, i).lab, at(clusters, j).lab);
       if (best === null || distance < best.distance) best = { i, j, distance };
     }
   }
@@ -34,10 +32,7 @@ export function mergeClusters(clusters: readonly Cluster[], threshold: number): 
   for (;;) {
     const pair = closestPair(result);
     if (pair === null || pair.distance >= threshold) return result;
-    const a = result[pair.i];
-    const b = result[pair.j];
-    if (!a || !b) return result;
-    result[pair.i] = combine(a, b);
+    result[pair.i] = combine(at(result, pair.i), at(result, pair.j));
     result.splice(pair.j, 1);
   }
 }
