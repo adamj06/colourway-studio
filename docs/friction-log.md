@@ -228,3 +228,19 @@ Template:
 - **Resolved by:** Verified against real responses and fixtures before coding; the filter and the reason are recorded in the build log.
 - **Prevention:** Verify a data premise with a real query before it decides a filter. This is what the "don't guess API shapes" rule is for.
 - **Caught by:** agent itself
+
+## 2026-11-15 19:03: Lint depended on route types left over from local builds
+
+- **Doing:** 002-vam-browse, PR #12: CI lint failed with 5 "error typed value" errors on route and page params.
+- **What went wrong:** Type-aware lint read Next's generated types in `.next/types`, which exist after any local build but not on a clean CI checkout. I never ran lint from a clean tree, so it passed locally. Same class of bug as the 001 `LayoutProps` typecheck failure, where I fixed the symptom (typecheck) and not the cause.
+- **Resolved by:** `lint` now runs `next typegen` first. Added `npm run verify:clean` (delete `.next`, then format:check, lint, typecheck, test, build, size), documented in the runbook as "run before pushing". Reproduced the 5 errors from a clean tree first, then confirmed 0 after.
+- **Prevention:** `verify:clean` in the runbook. Proposed, not applied (the project instructions file is guarded): in "Before saying a feature is done", replace "run lint, typecheck and tests" with "run `npm run verify:clean`".
+- **Caught by:** CI
+
+## 2026-11-15 19:03: Returning error outcomes from cached functions made errors cacheable
+
+- **Doing:** 002-vam-browse, PR #12 review: serving stale data during a V&A outage.
+- **What went wrong:** My fix for lost error classes (return an Outcome instead of throwing) put failures inside the cached value, so a failed revalidation could overwrite a good entry and defeat serve-stale. My tests mocked `next/cache`, so none could see it, and the runbook overclaimed.
+- **Resolved by:** Cache successes and 404s only. Transient failures throw inside the cache with the code in `error.digest` (the class does not survive the boundary, the digest does) and are mapped to 502/504 outside it. The policy is unit tested; real use-cache "good, failure, good" is not, and the runbook says so.
+- **Prevention:** When a fix changes what gets cached, ask what the next revalidation does to an existing good entry. No project-instructions change proposed.
+- **Caught by:** Claude PR review

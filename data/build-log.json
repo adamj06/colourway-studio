@@ -40,7 +40,9 @@
       "Agent mistakes that were self-caught, not human-caught: I wrote an eslint-disable comment twice (CLAUDE.md forbids it) and removed both; I let the plan pre-assume a last-good cache that the docs show does not persist on serverless; and my own new race-condition e2e test found a stuck \"Loading…\" button in the search hook.",
       "The review fixes were not prompted by Adam: the independent reviewers found the cache-boundary 500 bug and the others.",
       "Adam caught that I had dropped the Claude-Model trailer from later commits after reading a session instruction about attribution lines as covering it. He clarified in CLAUDE.md that it is a required project metadata trailer, and had me add it back to the four unpushed commits that lacked it.",
-      "Adam asked for the no-inline-disable rule to be enforced mechanically (linterOptions.noInlineConfig) after I wrote two eslint-disable comments despite the CLAUDE.md ban, and asked for the six friction entries for this feature."
+      "Adam asked for the no-inline-disable rule to be enforced mechanically (linterOptions.noInlineConfig) after I wrote two eslint-disable comments despite the CLAUDE.md ban, and asked for the six friction entries for this feature.",
+      "CI caught a lint failure I never saw locally: type-aware lint depended on route types in .next/types left by earlier builds, the same class of bug as the 001 LayoutProps failure. Fixed at the root (typegen in lint, plus npm run verify:clean).",
+      "The Claude PR review caught that my Outcome fix for lost error classes made failures cacheable, so a failed revalidation could overwrite a good entry and defeat serve-stale. Failures now throw inside the cache with the code in error.digest; only successes and 404s are cached."
     ],
     "reviewFindingsFixed": 17,
     "prUrl": null
