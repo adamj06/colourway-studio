@@ -13,7 +13,10 @@ function statusText(search: DesignSearch, q: string): string {
   if (search.loading) return 'Loading designs…';
   if (search.failed) return '';
   if (search.items.length === 0) return q ? `No designs found for “${q}”.` : 'No designs found.';
-  return `Showing ${String(search.items.length)} of ${String(search.total)} designs`;
+  // "of total" only while more pages remain: the total counts records the mapper may have dropped (no usable image).
+  return search.hasMore
+    ? `Showing ${String(search.items.length)} of ${String(search.total)} designs`
+    : `Showing ${String(search.items.length)} designs`;
 }
 
 function Footer({ search }: { search: DesignSearch }) {

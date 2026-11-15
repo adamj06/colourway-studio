@@ -13,6 +13,10 @@ const TEST_FILES = ['**/*.test.{ts,tsx}', 'tests/**/*.{ts,tsx}', '**/*.spec.ts']
 const jsxA11yRecommendedRules = jsxA11y.flatConfigs.recommended.rules;
 
 const eslintConfig = defineConfig([
+  // Inline `eslint-disable` / `eslint-enable` / `eslint-env` comments are ignored: CLAUDE.md bans them, and this
+  // makes the ban mechanical. A genuine exception is a scoped override below, with a comment linking its ADR.
+  { linterOptions: { noInlineConfig: true } },
+
   ...nextVitals,
   ...nextTs,
 

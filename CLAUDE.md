@@ -51,6 +51,7 @@ Out of scope: accounts, a database, server-side image processing, paid APIs. It 
 - **Commits:** conventional commits, plus these trailers:
   - `Claude-Model: <model used for most of this change>`
   - `Feature: <build-log feature id>`
+  - `Claude-Model` is a project metadata trailer this repo requires, not an attribution line.
 
 ## Production standards
 
