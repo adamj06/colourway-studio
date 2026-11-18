@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { hexToRgb, rgbToLab } from '../lib/colour/convert';
 import { deltaE2000 } from '../lib/colour/delta-e';
@@ -7,6 +7,10 @@ import { recolour } from '../lib/colour/recolour';
 import type { Lab } from '../lib/colour/types';
 import { createRecolourHandler } from './recolour-handler';
 import type { RecolourResponse } from './recolour-protocol';
+
+// These tests build real lookup tables (65^3 nodes, a few hundred ms each). Under mutation testing the instrumented
+// code is several times slower, so they need more than the default 5 s. The assertions are unchanged.
+vi.setConfig({ testTimeout: 60_000 });
 
 const labOf = (hex: string): Lab => rgbToLab(hexToRgb(hex));
 const SOURCES = ['#C0392B', '#2E86C1', '#27AE60', '#F1C40F'].map(labOf);
