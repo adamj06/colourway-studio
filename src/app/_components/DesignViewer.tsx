@@ -1,5 +1,6 @@
 'use client';
 
+import { useRef } from 'react';
 import type { Design } from '@/lib/vam/types';
 import { DesignImage } from './DesignImage';
 import { RecolourCanvas } from './RecolourCanvas';
@@ -15,8 +16,14 @@ const fit = 'max-h-full max-w-full object-contain';
 export function DesignViewer({ design, palette, colourway, recolour }: Props) {
   const alt = `${design.title}${design.objectType ? `, ${design.objectType.toLowerCase()}` : ''}`;
   const showFrame = recolour.frame !== null && !colourway.showOriginal;
+  const viewerRef = useRef<HTMLDivElement>(null);
+  // The Try again button disappears when it is pressed: keep keyboard focus in the viewer rather than on <body>.
+  const retry = () => {
+    recolour.retry();
+    viewerRef.current?.focus();
+  };
   return (
-    <div>
+    <div ref={viewerRef} tabIndex={-1} className="focus:outline-none">
       <div className="flex aspect-[4/3] max-h-[80vh] items-center justify-center bg-mat">
         {/* Always mounted, only hidden: the palette and recolour workers read this decoded element. */}
         <DesignImage
@@ -47,7 +54,7 @@ export function DesignViewer({ design, palette, colourway, recolour }: Props) {
       {recolour.failed ? (
         <p role="alert" className="mt-3">
           We couldn’t recolour this image, so the original is showing.{' '}
-          <button type="button" onClick={recolour.retry} className="underline">
+          <button type="button" onClick={retry} className="underline">
             Try again
           </button>
         </p>

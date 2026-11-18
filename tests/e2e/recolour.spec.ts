@@ -127,6 +127,7 @@ test.describe('recolouring on the design page', () => {
 
     blockWorker = false;
     await alert.getByRole('button', { name: 'Try again' }).click();
+    await expect(page.locator('body')).not.toBeFocused();
     await expect(recoloured(page)).toBeVisible();
     await expect(alert).toHaveCount(0);
   });

@@ -43,22 +43,8 @@ function release(snapshot: Snapshot): void {
   if (snapshot.kind === 'bitmap') snapshot.bitmap.close();
 }
 
+/** The prepare message's id: recolour requests are numbered from 1. */
 const PREPARE_ID = 0;
-
-/** Request ids and the tag each one was asked for. Id 0 is the prepare message; recolour requests follow. */
-function createIds() {
-  const tags = new Map<number, string>();
-  let next = 1;
-  let newest = -1;
-  return {
-    start(tag: string): number {
-      newest = next++;
-      tags.set(newest, tag);
-      return newest;
-    },
-    tagIfNewest: (id: number): string | undefined => (id === newest ? tags.get(id) : undefined),
-  };
-}
 
 /** Snapshots the image and hands it to the worker. False when the client was disposed first (nothing was sent). */
 async function prepareWorker(
@@ -85,12 +71,13 @@ async function prepareWorker(
 export const SETTLE_MS = 250;
 
 type Quality = 'preview' | 'final';
+type Queued = { request: RecolourRequest; quality: Quality };
 
 /**
  * Every change is drawn from a cheap preview; once nothing has changed for SETTLE_MS the full-quality frame follows
  * (a colour picker being dragged only ever gets previews). The timer restarts on each change.
  */
-function createSettler(send: (request: RecolourRequest, quality: Quality) => void, isLive: () => boolean) {
+function createSettler(queue: (queued: Queued) => void, isLive: () => boolean) {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const cancel = () => {
     clearTimeout(timer);
@@ -98,11 +85,39 @@ function createSettler(send: (request: RecolourRequest, quality: Quality) => voi
   return {
     cancel,
     change(request: RecolourRequest) {
-      send(request, 'preview');
+      queue({ request, quality: 'preview' });
       cancel();
       timer = setTimeout(() => {
-        if (isLive()) send(request, 'final');
+        if (isLive()) queue({ request, quality: 'final' });
       }, SETTLE_MS);
+    },
+  };
+}
+
+/** The one request in the worker and the newest change waiting behind it. Ids count up from 1 (0 is the prepare). */
+function createSendQueue(post: (id: number, queued: Queued) => void, canSend: () => boolean) {
+  let nextId = PREPARE_ID;
+  let inFlight: { id: number; tag: string } | null = null;
+  let waiting: Queued | null = null;
+  const pump = () => {
+    if (!canSend() || inFlight !== null || waiting === null) return;
+    const queued = waiting;
+    waiting = null;
+    inFlight = { id: ++nextId, tag: queued.request.tag };
+    post(inFlight.id, queued);
+  };
+  return {
+    pump,
+    queue: (queued: Queued) => {
+      waiting = queued;
+      pump();
+    },
+    /** The tag of the request `id` answers, if it is the one in flight (which then ends); undefined for anything else. */
+    answered(id: number): string | undefined {
+      if (inFlight?.id !== id) return undefined;
+      const { tag } = inFlight;
+      inFlight = null;
+      return tag;
     },
   };
 }
@@ -110,6 +125,11 @@ function createSettler(send: (request: RecolourRequest, quality: Quality) => voi
 /**
  * Owns one recolour worker for one loaded image and one source palette. The worker is created here, lazily, so
  * none of this is downloaded until a colour is first changed. `onResult` gets a frame, or null when it failed.
+ *
+ * At most one recolour is in the worker at a time and only the newest change waits behind it. When an answer
+ * arrives it is drawn (it was the newest request sent) and the waiting change, if any, goes next. Sending every
+ * input event straight away instead would make each answer stale before it arrived, so nothing would paint while a
+ * picker is being dragged.
  */
 export function createRecolourClient(
   image: HTMLImageElement,
@@ -118,16 +138,18 @@ export function createRecolourClient(
   onResult: (tag: string, frame: Frame | null) => void,
 ): RecolourClient {
   const worker = new Worker(new URL('../../workers/recolour.worker.ts', import.meta.url), { type: 'module' });
-  const ids = createIds();
   let latest = first;
   let prepared = false;
   let stopped = false;
   let broken = false;
 
-  const send = (request: RecolourRequest, quality: Quality) => {
-    worker.postMessage({ type: 'recolour', id: ids.start(request.tag), targets: request.targets, quality });
-  };
-  const settler = createSettler(send, () => prepared && !stopped && !broken);
+  const sender = createSendQueue(
+    (id, { request, quality }) => {
+      worker.postMessage({ type: 'recolour', id, targets: request.targets, quality });
+    },
+    () => prepared && !stopped && !broken,
+  );
+  const settler = createSettler(sender.queue, () => !stopped && !broken);
   const fail = () => {
     broken = true;
     settler.cancel();
@@ -137,14 +159,15 @@ export function createRecolourClient(
 
   worker.onmessage = (event: MessageEvent<unknown>) => {
     const answer = interpret(event.data);
-    if (answer.kind === 'fail') {
+    if (answer.kind === 'fail' || (answer.id === PREPARE_ID && answer.frame === null)) {
       fail();
       return;
     }
-    // Late answers to superseded requests are ignored: only the newest request id is ever drawn.
-    const tag = ids.tagIfNewest(answer.id);
-    if (stopped || tag === undefined) return;
+    // Only the answer to the request in flight is drawn: anything else (late, or for another request) is ignored.
+    const tag = stopped ? undefined : sender.answered(answer.id);
+    if (tag === undefined) return;
     onResult(tag, answer.frame);
+    sender.pump();
   };
   worker.onerror = fail;
   worker.onmessageerror = fail;

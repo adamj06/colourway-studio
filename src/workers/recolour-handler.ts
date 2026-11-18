@@ -72,6 +72,8 @@ export function createRecolourHandler(deps: RecolourHandlerDeps = {}): RecolourH
       const message = parsed.data;
       try {
         if (message.type === 'prepare') {
+          // A recolour still waiting belonged to the previous image: it must not be answered with it.
+          latest++;
           // Copy: the cache must not change if the caller reuses its buffer.
           const rgba = new Uint8ClampedArray(message.image.data);
           const { width, height } = message.image;

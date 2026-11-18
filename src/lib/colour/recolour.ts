@@ -105,7 +105,9 @@ export function recolour(
 const DEFAULT_LUT_SIZE = 65;
 
 function checkSize(size: number): void {
-  if (!Number.isInteger(size) || size < 2) throw new RangeError('LUT size must be an integer of at least 2.');
+  // Above 256 nodes per axis, neighbouring nodes would share a byte value and a cell would have zero width.
+  if (!Number.isInteger(size) || size < 2 || size > 256)
+    throw new RangeError('LUT size must be an integer from 2 to 256.');
 }
 
 /** Unrounded sRGB (0..255, clamped to the gamut) of a Lab colour, so the table keeps sub-byte precision. */
@@ -123,12 +125,15 @@ function nodeByte(i: number, size: number): number {
 /** Fills the Lab colour and blend weights of every grid node (r-major). These depend only on the source palette. */
 function fillNodes(size: number, sources: readonly Lab[], labs: Float64Array, weights: Float32Array): void {
   const bytes = Array.from({ length: size }, (_, i) => nodeByte(i, size));
+  // Weights are worked out in float64 and stored in float32: 1/d^4 overflows float32 for a node that is almost on a swatch.
+  const scratch = new Float64Array(sources.length);
   for (let n = 0; n < size ** 3; n++) {
     const r = Math.floor(n / (size * size));
     const g = Math.floor(n / size) % size;
     const [l, a, b] = rgbToLab([at(bytes, r), at(bytes, g), at(bytes, n % size)]);
     labs.set([l, a, b], n * 3);
-    writeWeights(l, a, b, sources, weights, n * sources.length);
+    writeWeights(l, a, b, sources, scratch, 0);
+    weights.set(scratch, n * sources.length);
   }
 }
 

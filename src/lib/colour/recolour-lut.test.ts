@@ -117,6 +117,20 @@ describe('buildRecolourLut', () => {
     }
   });
 
+  it('stays finite when a source lies a hair off a grid node colour (the weights would overflow in float32)', () => {
+    const [l, a, b] = labOf('#808080');
+    const sources: Lab[] = [[l + 1e-11, a, b], labOf('#C8281E')];
+    const targets: Lab[] = [labOf('#2E86C1'), labOf('#F1C40F')];
+    const lut = buildRecolourLut(sources, targets, 3);
+    expect(lut.every((value) => Number.isFinite(value))).toBe(true);
+    const input = rgba([
+      [128, 128, 128],
+      [120, 130, 125],
+    ]);
+    expectWithin(applyLut(input, lut, 3), recolour(input, sources, targets), 40);
+    expect(applyLut(input, lut, 3).slice(0, 3)).not.toEqual(new Uint8ClampedArray([0, 0, 0]));
+  });
+
   it('is deterministic', () => {
     const a = buildRecolourLut(FOUR_SOURCES, FOUR_TARGETS, 9);
     const b = buildRecolourLut(FOUR_SOURCES, FOUR_TARGETS, 9);
@@ -140,7 +154,7 @@ describe('buildRecolourLut', () => {
     expect(() => buildRecolourLut(FOUR_SOURCES.slice(0, 3), FOUR_TARGETS)).toThrow(RangeError);
   });
 
-  it.each([[1], [0], [-3], [2.5], [Number.NaN]])('throws RangeError for size %s', (size) => {
+  it.each([[1], [0], [-3], [2.5], [Number.NaN], [257]])('throws RangeError for size %s', (size) => {
     expect(() => buildRecolourLut(FOUR_SOURCES, FOUR_TARGETS, size)).toThrow(RangeError);
   });
 });

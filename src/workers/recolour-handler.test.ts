@@ -384,3 +384,20 @@ describe('recolour handler: preview and final quality', () => {
     expect(imagesWithId(posted, 4)).toHaveLength(0);
   });
 });
+
+describe('recolour handler: a prepare while a recolour is waiting', () => {
+  it('drops the waiting recolour instead of answering it with the old image', async () => {
+    const { posted, post } = recorder();
+    const tick = armedTick();
+    const handler = createRecolourHandler(tick);
+    await handler.handle(prepareRequest(1), post);
+    tick.arm();
+    const waiting = handler.handle(recolourRequest(2), post);
+    await handler.handle(prepareRequest(3, pixels(2, 4, 4), SOURCES, 4, 4), post);
+    tick.release();
+    await waiting;
+    expect(imagesWithId(posted, 2)).toHaveLength(0);
+    await handler.handle(recolourRequest(4), post);
+    expect([imageOf(posted, 4).width, imageOf(posted, 4).height]).toEqual([4, 4]);
+  });
+});

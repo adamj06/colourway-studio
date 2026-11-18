@@ -59,6 +59,8 @@ export function useRecolour({ image, swatches, targets, active }: Args): Recolou
     return () => {
       client.dispose();
       clientRef.current = null;
+      // A frame from this client must not be shown by the next one (after Reset all and a new edit, say).
+      setOutcome(null);
     };
   }, [active, image, sourcesKey, attempt]);
 
