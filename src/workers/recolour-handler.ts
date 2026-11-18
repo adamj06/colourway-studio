@@ -1,7 +1,7 @@
 // The logic of the recolour worker, free of worker globals so it can be unit tested in node.
-// 'prepare' caches the image's Lab pixels and blend weights (they depend only on the image and the source palette);
-// each 'recolour' then only applies the shifts, so dragging a colour picker is cheap.
-import { applyShifts, blendWeights, labPixels, shiftsOf } from '../lib/colour/recolour';
+// 'prepare' caches a copy of the image and the source palette. Each 'recolour' builds a 65^3 lookup table for the
+// current targets and runs every pixel through it (trilinear), so dragging a colour picker stays cheap.
+import { applyLut, buildRecolourLut } from '../lib/colour/recolour';
 import type { Lab } from '../lib/colour/types';
 import { macrotask } from './macrotask';
 import { requestSchema, type RecolourResponse } from './recolour-protocol';
@@ -19,8 +19,6 @@ type Prepared = {
   width: number;
   height: number;
   rgba: Uint8ClampedArray;
-  labs: Float64Array;
-  weights: Float64Array;
   sources: Lab[];
 };
 
@@ -45,10 +43,10 @@ export function createRecolourHandler(deps: RecolourHandlerDeps = {}): RecolourH
       post({ type: 'error', id, message: 'The number of targets must match the prepared palette.' });
       return;
     }
-    const { width, height, rgba, labs, weights, sources } = prepared;
+    const { width, height, rgba, sources } = prepared;
     await yieldTick();
     if (latest !== ticket) return;
-    const data = applyShifts(rgba, labs, weights, shiftsOf(sources, targets));
+    const data = applyLut(rgba, buildRecolourLut(sources, targets));
     post({ type: 'image', id, width, height, data });
   }
 
@@ -64,16 +62,8 @@ export function createRecolourHandler(deps: RecolourHandlerDeps = {}): RecolourH
         if (message.type === 'prepare') {
           // Copy: the cache must not change if the caller reuses its buffer.
           const rgba = new Uint8ClampedArray(message.image.data);
-          const labs = labPixels(rgba);
           const { width, height } = message.image;
-          prepared = {
-            width,
-            height,
-            rgba,
-            labs,
-            weights: blendWeights(labs, message.sources),
-            sources: message.sources,
-          };
+          prepared = { width, height, rgba, sources: message.sources };
           return;
         }
         await recolour(message.id, message.targets, ++latest, post);

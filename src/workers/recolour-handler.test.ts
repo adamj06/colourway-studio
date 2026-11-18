@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { hexToRgb, rgbToLab } from '../lib/colour/convert';
+import { deltaE2000 } from '../lib/colour/delta-e';
 import { mulberry32 } from '../lib/colour/prng';
 import { recolour } from '../lib/colour/recolour';
 import type { Lab } from '../lib/colour/types';
@@ -17,6 +18,19 @@ function pixels(seed = 1, width = 8, height = 6): Uint8ClampedArray {
   const data = new Uint8ClampedArray(width * height * 4);
   for (let i = 0; i < data.length; i++) data[i] = i % 4 === 3 ? 255 - (i % 7) : Math.floor(rng() * 256);
   return data;
+}
+
+/**
+ * The handler recolours through a 33^3 lookup table, so output is not byte-identical to the direct recolour().
+ * The approved tolerance (acceptance criterion 4) is deltaE2000 < 1 per pixel against the direct version.
+ */
+function expectCloseToDirect(actual: Uint8ClampedArray, expected: Uint8ClampedArray): void {
+  expect(actual).toHaveLength(expected.length);
+  for (let p = 0; p < expected.length / 4; p++) {
+    const rgb = (d: Uint8ClampedArray) => [d[p * 4] ?? -1, d[p * 4 + 1] ?? -1, d[p * 4 + 2] ?? -1] as const;
+    expect(deltaE2000(rgbToLab(rgb(actual)), rgbToLab(rgb(expected)))).toBeLessThan(1);
+    expect(actual[p * 4 + 3]).toBe(expected[p * 4 + 3]);
+  }
 }
 
 const lab3 = (l: readonly Lab[]) => l.map((v) => [...v]);
@@ -104,7 +118,7 @@ describe('recolour handler: recolour', () => {
     const handler = createRecolourHandler(immediate());
     await handler.handle(prepareRequest(1, data), post);
     await handler.handle(recolourRequest(2, TARGETS_A), post);
-    expect([...imageOf(posted, 2).data]).toEqual([...recolour(data, SOURCES, TARGETS_A)]);
+    expectCloseToDirect(imageOf(posted, 2).data, recolour(data, SOURCES, TARGETS_A));
   });
 
   it('answers repeated recolour requests from the one prepared image', async () => {
@@ -115,7 +129,7 @@ describe('recolour handler: recolour', () => {
     await handler.handle(recolourRequest(2, TARGETS_A), post);
     await handler.handle(recolourRequest(3, TARGETS_B), post);
     await handler.handle(recolourRequest(4, TARGETS_A), post);
-    expect([...imageOf(posted, 3).data]).toEqual([...recolour(data, SOURCES, TARGETS_B)]);
+    expectCloseToDirect(imageOf(posted, 3).data, recolour(data, SOURCES, TARGETS_B));
     expect([...imageOf(posted, 4).data]).toEqual([...imageOf(posted, 2).data]);
   });
 
@@ -182,7 +196,7 @@ describe('recolour handler: latest request wins', () => {
   it('answers the newest recolour correctly after a superseded one was dropped', async () => {
     const data = pixels(6);
     const posted = await overlap(2, 3, data);
-    expect([...imageOf(posted, 3).data]).toEqual([...recolour(data, SOURCES, TARGETS_B)]);
+    expectCloseToDirect(imageOf(posted, 3).data, recolour(data, SOURCES, TARGETS_B));
   });
 
   it('posts a superseded run nothing even when it is held until after the newer one finished', async () => {
@@ -236,7 +250,7 @@ describe('recolour handler: failures', () => {
     await handler.handle(prepareRequest(1, pixels(9)), post);
     await handler.handle(prepareRequest(2, second), post);
     await handler.handle(recolourRequest(3), post);
-    expect([...imageOf(posted, 3).data]).toEqual([...recolour(second, SOURCES, TARGETS_A)]);
+    expectCloseToDirect(imageOf(posted, 3).data, recolour(second, SOURCES, TARGETS_A));
   });
 
   const bad = () => prepareRequest(5);
@@ -248,7 +262,7 @@ describe('recolour handler: failures', () => {
       () => ({ ...bad(), image: { width: 2049, height: 1, data: new Uint8ClampedArray(2049 * 4) } }),
       5,
     ],
-    ['too few sources', () => ({ ...bad(), sources: lab3(SOURCES.slice(0, 3)) }), 5],
+    ['no sources', () => ({ ...bad(), sources: [] }), 5],
     ['NaN source', () => ({ ...bad(), sources: [[Number.NaN, 0, 0], ...lab3(SOURCES.slice(1))] }), 5],
     ['unknown type with an id', () => ({ type: 'explode', id: 11 }), 11],
     ['missing id', () => ({ type: 'recolour', targets: lab3(TARGETS_A) }), null],
@@ -283,7 +297,7 @@ describe('recolour handler: failures', () => {
       post,
     );
     await handler.handle(recolourRequest(3), post);
-    expect([...imageOf(posted, 3).data]).toEqual([...recolour(data, SOURCES, TARGETS_A)]);
+    expectCloseToDirect(imageOf(posted, 3).data, recolour(data, SOURCES, TARGETS_A));
   });
 
   it('keeps the cached image when a recolour request is invalid', async () => {
@@ -293,7 +307,7 @@ describe('recolour handler: failures', () => {
     await handler.handle(prepareRequest(1, data), post);
     await handler.handle({ type: 'recolour', id: 2, targets: [[Number.NaN, 0, 0]] }, post);
     await handler.handle(recolourRequest(3), post);
-    expect([...imageOf(posted, 3).data]).toEqual([...recolour(data, SOURCES, TARGETS_A)]);
+    expectCloseToDirect(imageOf(posted, 3).data, recolour(data, SOURCES, TARGETS_A));
   });
 
   it('posts an error for the request id when the yield fails, and does not throw itself', async () => {
