@@ -21,8 +21,8 @@ function pixels(seed = 1, width = 8, height = 6): Uint8ClampedArray {
 }
 
 /**
- * The handler recolours through a 33^3 lookup table, so output is not byte-identical to the direct recolour().
- * The approved tolerance (acceptance criterion 4) is deltaE2000 < 1 per pixel against the direct version.
+ * The handler recolours through a lookup table, so output is not byte-identical to the direct recolour(). The
+ * tolerance for these small, smooth test images is deltaE2000 < 1 (the dense-sweep bound of 2.5 is in the LUT tests).
  */
 function expectCloseToDirect(actual: Uint8ClampedArray, expected: Uint8ClampedArray): void {
   expect(actual).toHaveLength(expected.length);
@@ -329,5 +329,58 @@ describe('recolour handler: failures', () => {
     await handler.handle(prepareRequest(1), post);
     await handler.handle(recolourRequest(2), post);
     expect(imagesWithId(posted, 2)).toHaveLength(1);
+  });
+});
+
+describe('recolour handler: preview and final quality', () => {
+  const withQuality = (id: number, quality: unknown) => ({ ...recolourRequest(id), quality });
+  const maxDelta = (a: Uint8ClampedArray, b: Uint8ClampedArray): number => {
+    let worst = 0;
+    for (let p = 0; p < a.length / 4; p++) {
+      const rgb = (d: Uint8ClampedArray) => [d[p * 4] ?? -1, d[p * 4 + 1] ?? -1, d[p * 4 + 2] ?? -1] as const;
+      worst = Math.max(worst, deltaE2000(rgbToLab(rgb(a)), rgbToLab(rgb(b))));
+    }
+    return worst;
+  };
+
+  it('answers a preview request with the id, the image size and unchanged alpha', async () => {
+    const { posted, post } = recorder();
+    const handler = createRecolourHandler(immediate());
+    const data = pixels();
+    await handler.handle(prepareRequest(1, data), post);
+    await handler.handle(withQuality(2, 'preview'), post);
+    const image = imageOf(posted, 2);
+    expect([image.width, image.height]).toEqual([8, 6]);
+    for (let p = 0; p < 48; p++) expect(image.data[p * 4 + 3]).toBe(data[p * 4 + 3]);
+  });
+
+  it('keeps a preview close to the direct recolour, but not necessarily as close as a final', async () => {
+    const { posted, post } = recorder();
+    const handler = createRecolourHandler(immediate());
+    const data = pixels(7, 40, 30);
+    await handler.handle(prepareRequest(1, data, SOURCES, 40, 30), post);
+    await handler.handle(withQuality(2, 'preview'), post);
+    await handler.handle(withQuality(3, 'final'), post);
+    const direct = recolour(data, SOURCES, TARGETS_A);
+    expect(maxDelta(imageOf(posted, 2).data, direct)).toBeLessThan(4.5);
+    expect(maxDelta(imageOf(posted, 3).data, direct)).toBeLessThan(1);
+  });
+
+  it('treats a request without quality as final', async () => {
+    const { posted, post } = recorder();
+    const handler = createRecolourHandler(immediate());
+    await handler.handle(prepareRequest(1), post);
+    await handler.handle(recolourRequest(2), post);
+    await handler.handle(withQuality(3, 'final'), post);
+    expect([...imageOf(posted, 2).data]).toEqual([...imageOf(posted, 3).data]);
+  });
+
+  it('rejects an unknown quality with an error for that request id', async () => {
+    const { posted, post } = recorder();
+    const handler = createRecolourHandler(immediate());
+    await handler.handle(prepareRequest(1), post);
+    await handler.handle(withQuality(4, 'draft'), post);
+    expect(errorsWithId(posted, 4)).toHaveLength(1);
+    expect(imagesWithId(posted, 4)).toHaveLength(0);
   });
 });

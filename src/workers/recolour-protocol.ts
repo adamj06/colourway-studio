@@ -21,9 +21,15 @@ const image = z
     path: ['data'],
   });
 
+/**
+ * 'preview' is for the frames drawn while a colour is being dragged (a coarser, much cheaper table); 'final' is for
+ * when it has settled. A request without one is final.
+ */
+export const qualitySchema = z.enum(['preview', 'final']);
+
 export const requestSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('prepare'), id, image, sources: labs }),
-  z.object({ type: z.literal('recolour'), id, targets: labs }),
+  z.object({ type: z.literal('recolour'), id, targets: labs, quality: qualitySchema.optional() }),
 ]);
 
 export const responseSchema = z.discriminatedUnion('type', [

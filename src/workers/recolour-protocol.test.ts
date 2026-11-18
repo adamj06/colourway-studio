@@ -78,7 +78,15 @@ describe('recolour request schema: recolour', () => {
     expect(requestSchema.safeParse(recolourReq({ targets: labs(MAX_K) })).success).toBe(true);
   });
 
+  it('accepts the preview and final qualities, and no quality at all', () => {
+    expect(requestSchema.safeParse(recolourReq({ quality: 'preview' })).success).toBe(true);
+    expect(requestSchema.safeParse(recolourReq({ quality: 'final' })).success).toBe(true);
+    expect(requestSchema.safeParse(recolourReq()).success).toBe(true);
+  });
+
   it.each([
+    ['an unknown quality', { quality: 'draft' }],
+    ['a numeric quality', { quality: 1 }],
     ['too few targets', { targets: labs(MIN_SWATCHES - 1) }],
     ['too many targets', { targets: labs(MAX_K + 1) }],
     ['a NaN target component', { targets: [...labs(4), [0, Number.NaN, 0]] }],

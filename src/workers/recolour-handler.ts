@@ -1,10 +1,14 @@
 // The logic of the recolour worker, free of worker globals so it can be unit tested in node.
-// 'prepare' caches a copy of the image and the source palette. Each 'recolour' builds a 65^3 lookup table for the
-// current targets and runs every pixel through it (trilinear), so dragging a colour picker stays cheap.
-import { applyLut, buildRecolourLut } from '../lib/colour/recolour';
+// 'prepare' caches a copy of the image and the source palette. Each 'recolour' builds a lookup table for the current
+// targets and runs every pixel through it (trilinear). A 'preview' uses a 33^3 table (cheap enough to follow a colour
+// picker being dragged), a 'final' a 65^3 one (within deltaE2000 2.5 of the exact recolour).
+import { applyLut, createLutBuilder, type RecolourLutBuilder } from '../lib/colour/recolour';
 import type { Lab } from '../lib/colour/types';
 import { macrotask } from './macrotask';
 import { requestSchema, type RecolourResponse } from './recolour-protocol';
+
+type Quality = 'preview' | 'final';
+const LUT_SIZE: Record<Quality, number> = { preview: 33, final: 65 };
 
 export type RecolourHandlerDeps = {
   /** Lets newer messages be delivered before a run posts. Defaults to a macrotask yield. */
@@ -20,6 +24,8 @@ type Prepared = {
   height: number;
   rgba: Uint8ClampedArray;
   sources: Lab[];
+  /** Table builders hold per-palette work, so each is made on first use and kept until the next prepare. */
+  builders: Partial<Record<Quality, RecolourLutBuilder>>;
 };
 
 function idOf(request: unknown): number | null {
@@ -34,7 +40,11 @@ export function createRecolourHandler(deps: RecolourHandlerDeps = {}): RecolourH
   // Each recolour takes a ticket; only the call holding the latest ticket may post. A superseded one is silent.
   let latest = 0;
 
-  async function recolour(id: number, targets: Lab[], ticket: number, post: (r: RecolourResponse) => void) {
+  async function recolour(
+    { id, targets, quality = 'final' }: { id: number; targets: Lab[]; quality?: Quality | undefined },
+    ticket: number,
+    post: (r: RecolourResponse) => void,
+  ) {
     if (prepared === null) {
       post({ type: 'error', id, message: 'No image has been prepared yet.' });
       return;
@@ -43,10 +53,12 @@ export function createRecolourHandler(deps: RecolourHandlerDeps = {}): RecolourH
       post({ type: 'error', id, message: 'The number of targets must match the prepared palette.' });
       return;
     }
-    const { width, height, rgba, sources } = prepared;
+    const { width, height, rgba, sources, builders } = prepared;
     await yieldTick();
     if (latest !== ticket) return;
-    const data = applyLut(rgba, buildRecolourLut(sources, targets));
+    const size = LUT_SIZE[quality];
+    const builder = (builders[quality] ??= createLutBuilder(sources, size));
+    const data = applyLut(rgba, builder(targets), size);
     post({ type: 'image', id, width, height, data });
   }
 
@@ -63,10 +75,10 @@ export function createRecolourHandler(deps: RecolourHandlerDeps = {}): RecolourH
           // Copy: the cache must not change if the caller reuses its buffer.
           const rgba = new Uint8ClampedArray(message.image.data);
           const { width, height } = message.image;
-          prepared = { width, height, rgba, sources: message.sources };
+          prepared = { width, height, rgba, sources: message.sources, builders: {} };
           return;
         }
-        await recolour(message.id, message.targets, ++latest, post);
+        await recolour(message, ++latest, post);
       } catch {
         post({ type: 'error', id: message.id, message: 'Recolouring failed.' });
       }

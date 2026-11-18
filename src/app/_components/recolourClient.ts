@@ -81,6 +81,32 @@ async function prepareWorker(
   return true;
 }
 
+/** How long the targets must stay unchanged before the full-quality frame is asked for. */
+export const SETTLE_MS = 250;
+
+type Quality = 'preview' | 'final';
+
+/**
+ * Every change is drawn from a cheap preview; once nothing has changed for SETTLE_MS the full-quality frame follows
+ * (a colour picker being dragged only ever gets previews). The timer restarts on each change.
+ */
+function createSettler(send: (request: RecolourRequest, quality: Quality) => void, isLive: () => boolean) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const cancel = () => {
+    clearTimeout(timer);
+  };
+  return {
+    cancel,
+    change(request: RecolourRequest) {
+      send(request, 'preview');
+      cancel();
+      timer = setTimeout(() => {
+        if (isLive()) send(request, 'final');
+      }, SETTLE_MS);
+    },
+  };
+}
+
 /**
  * Owns one recolour worker for one loaded image and one source palette. The worker is created here, lazily, so
  * none of this is downloaded until a colour is first changed. `onResult` gets a frame, or null when it failed.
@@ -98,11 +124,13 @@ export function createRecolourClient(
   let stopped = false;
   let broken = false;
 
-  const send = (request: RecolourRequest) => {
-    worker.postMessage({ type: 'recolour', id: ids.start(request.tag), targets: request.targets });
+  const send = (request: RecolourRequest, quality: Quality) => {
+    worker.postMessage({ type: 'recolour', id: ids.start(request.tag), targets: request.targets, quality });
   };
+  const settler = createSettler(send, () => prepared && !stopped && !broken);
   const fail = () => {
     broken = true;
+    settler.cancel();
     worker.terminate();
     if (!stopped) onResult(latest.tag, null);
   };
@@ -125,7 +153,7 @@ export function createRecolourClient(
     .then((done) => {
       if (!done) return;
       prepared = true;
-      send(latest);
+      settler.change(latest);
     })
     .catch(fail);
 
@@ -136,10 +164,11 @@ export function createRecolourClient(
         if (!stopped) onResult(next.tag, null);
         return;
       }
-      if (prepared) send(next);
+      if (prepared) settler.change(next);
     },
     dispose() {
       stopped = true;
+      settler.cancel();
       worker.terminate();
     },
   };
