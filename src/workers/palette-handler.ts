@@ -2,6 +2,7 @@
 // palette.worker.ts is a thin wrapper that feeds it messages.
 import { extractPaletteSteps } from '../lib/colour/palette';
 import { sampleLabPixels } from '../lib/colour/sample';
+import { macrotask } from './macrotask';
 import { requestSchema, type PaletteRequest, type PaletteResponse } from './palette-protocol';
 
 export type PaletteHandlerDeps = {
@@ -12,21 +13,6 @@ export type PaletteHandlerDeps = {
 export type PaletteHandler = {
   handle(request: unknown, post: (response: PaletteResponse) => void): Promise<void>;
 };
-
-/**
- * Yields to the event loop for one task, so a message already waiting (a newer k) is delivered before the next
- * k-means iteration. A MessageChannel is used instead of setTimeout(0): timers are clamped (4 ms once nested, and
- * coarser still on some platforms), which added up to 20 clamped waits to every run.
- */
-const macrotask = (): Promise<void> =>
-  new Promise((resolve) => {
-    const { port1, port2 } = new MessageChannel();
-    port1.onmessage = () => {
-      port1.close();
-      resolve();
-    };
-    port2.postMessage(null);
-  });
 
 function idOf(request: unknown): number | null {
   if (typeof request !== 'object' || request === null || !('id' in request)) return null;
