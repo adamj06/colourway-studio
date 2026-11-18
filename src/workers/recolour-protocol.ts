@@ -1,15 +1,18 @@
 // Messages between the recolour UI and the recolour worker. Both directions are validated with zod: the worker is a
 // trust boundary like any other (pixels and ids come from the page, results come back to it).
 import { z } from 'zod';
-import { MAX_K, MIN_K } from './palette-protocol';
+import { MAX_K } from './palette-protocol';
 
 /** Largest image side the worker accepts. The UI sends at most 1600 px; the cap bounds memory regardless. */
 export const MAX_RECOLOUR_SIDE = 2048;
 
+/** A palette can have fewer swatches than the k that was asked for (near-identical colours merge), down to one. */
+export const MIN_SWATCHES = 1;
+
 const id = z.number().int().nonnegative();
 const side = z.number().int().min(1).max(MAX_RECOLOUR_SIDE);
 const lab = z.tuple([z.number(), z.number(), z.number()]);
-const labs = z.array(lab).min(MIN_K).max(MAX_K);
+const labs = z.array(lab).min(MIN_SWATCHES).max(MAX_K);
 
 const image = z
   .object({ width: side, height: side, data: z.instanceof(Uint8ClampedArray) })

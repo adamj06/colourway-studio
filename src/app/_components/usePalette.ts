@@ -12,6 +12,8 @@ export type PaletteView = {
   status: PaletteStatus;
   swatches: Swatch[];
   k: number;
+  /** The decoded design image, once it has loaded (the recolour worker reads the same element). */
+  image: HTMLImageElement | null;
   setK: (k: number) => void;
   retry: () => void;
   /** Call from the image's onLoad: the worker starts once the image has decoded. */
@@ -69,5 +71,5 @@ export function usePalette(): PaletteView {
   if (imageFailed) status = 'unavailable';
   if (answered === null) status = 'error';
   else if (answered !== undefined) status = 'ready';
-  return { status, swatches: answered ?? [], k, setK, retry, onImage, onImageError };
+  return { status, swatches: answered ?? [], k, image, setK, retry, onImage, onImageError };
 }

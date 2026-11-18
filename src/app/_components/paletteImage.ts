@@ -27,8 +27,8 @@ function drawToPixels(img: HTMLImageElement, width: number, height: number): Pix
  * Preferred: a downscaled ImageBitmap, transferred to the worker (no pixels copied on the main thread).
  * Fallback (no createImageBitmap or OffscreenCanvas): draw to a small canvas and send the RGBA pixels.
  */
-export async function snapshotImage(img: HTMLImageElement): Promise<Snapshot> {
-  const { width, height } = fitWithin(img.naturalWidth, img.naturalHeight, ANALYSIS_MAX_SIDE);
+export async function snapshotImage(img: HTMLImageElement, maxSide: number = ANALYSIS_MAX_SIDE): Promise<Snapshot> {
+  const { width, height } = fitWithin(img.naturalWidth, img.naturalHeight, maxSide);
   if (canUseBitmaps()) {
     try {
       const bitmap = await createImageBitmap(img, { resizeWidth: width, resizeHeight: height, resizeQuality: 'high' });

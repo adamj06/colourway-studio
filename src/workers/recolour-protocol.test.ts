@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { MAX_K, MIN_K } from './palette-protocol';
-import { MAX_RECOLOUR_SIDE, requestSchema, responseSchema } from './recolour-protocol';
+import { MAX_K } from './palette-protocol';
+import { MAX_RECOLOUR_SIDE, MIN_SWATCHES, requestSchema, responseSchema } from './recolour-protocol';
 
 const lab = (i: number): [number, number, number] => [50 + i, i, -i];
 const labs = (n: number) => Array.from({ length: n }, (_, i) => lab(i));
@@ -34,8 +34,8 @@ describe('recolour request schema: prepare', () => {
     expect(requestSchema.safeParse(prepare({ image: image(1, MAX_RECOLOUR_SIDE) })).success).toBe(true);
   });
 
-  it('accepts the minimum and maximum number of source swatches', () => {
-    expect(requestSchema.safeParse(prepare({ sources: labs(MIN_K) })).success).toBe(true);
+  it('accepts one swatch (a palette can merge down to one colour) up to the maximum', () => {
+    expect(requestSchema.safeParse(prepare({ sources: labs(MIN_SWATCHES) })).success).toBe(true);
     expect(requestSchema.safeParse(prepare({ sources: labs(MAX_K) })).success).toBe(true);
   });
 
@@ -52,7 +52,7 @@ describe('recolour request schema: prepare', () => {
     ['plain array data', { image: { width: 1, height: 1, data: [0, 0, 0, 255] } }],
     ['Uint8Array rather than clamped data', { image: { width: 1, height: 1, data: new Uint8Array(4) } }],
     ['missing image', { image: undefined }],
-    ['too few sources', { sources: labs(MIN_K - 1) }],
+    ['too few sources', { sources: labs(MIN_SWATCHES - 1) }],
     ['too many sources', { sources: labs(MAX_K + 1) }],
     ['a source with two components', { sources: [...labs(4), [1, 2]] }],
     ['a source with four components', { sources: [...labs(4), [1, 2, 3, 4]] }],
@@ -74,12 +74,12 @@ describe('recolour request schema: recolour', () => {
   });
 
   it('accepts the minimum and maximum number of targets', () => {
-    expect(requestSchema.safeParse(recolourReq({ targets: labs(MIN_K) })).success).toBe(true);
+    expect(requestSchema.safeParse(recolourReq({ targets: labs(MIN_SWATCHES) })).success).toBe(true);
     expect(requestSchema.safeParse(recolourReq({ targets: labs(MAX_K) })).success).toBe(true);
   });
 
   it.each([
-    ['too few targets', { targets: labs(MIN_K - 1) }],
+    ['too few targets', { targets: labs(MIN_SWATCHES - 1) }],
     ['too many targets', { targets: labs(MAX_K + 1) }],
     ['a NaN target component', { targets: [...labs(4), [0, Number.NaN, 0]] }],
     ['a target with two components', { targets: [...labs(4), [1, 2]] }],
