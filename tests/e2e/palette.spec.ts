@@ -10,7 +10,7 @@ const FIVE = [RED, BLUE, '#27AE60', '#F1C40F', '#8E44AD'] as const;
 
 const designUrl = `/design/${indianDesign.systemNumber}`;
 const status = (page: Page) => page.getByRole('status').filter({ hasText: /palette|extracting|copied/i });
-const swatches = (page: Page) => page.getByRole('button', { name: /^Colour \d+ of \d+, #[0-9A-F]{6}, / });
+const swatches = (page: Page) => page.getByLabel(/^Colour \d+ of \d+, #[0-9A-F]{6}, .* of the design\. Change colour$/);
 const kOption = (page: Page, k: number) => page.locator('label', { hasText: new RegExp(`^${String(k)}$`) });
 
 test.describe('palette on the design page', () => {
@@ -22,8 +22,8 @@ test.describe('palette on the design page', () => {
     await expect(swatches(page)).toHaveCount(2);
     const labels = await swatches(page).evaluateAll((els) => els.map((el) => el.getAttribute('aria-label')));
     expect(labels.sort()).toEqual([
-      `Colour 1 of 2, ${BLUE.toUpperCase()}, 50% of the design`,
-      `Colour 2 of 2, ${RED.toUpperCase()}, 50% of the design`,
+      `Colour 1 of 2, ${BLUE.toUpperCase()}, 50% of the design. Change colour`,
+      `Colour 2 of 2, ${RED.toUpperCase()}, 50% of the design. Change colour`,
     ]);
   });
 
@@ -58,7 +58,7 @@ test.describe('palette on the design page', () => {
     await expect(status(page)).toHaveText('Palette ready: 4 colours');
   });
 
-  test('a swatch copies its hex by keyboard and announces it', async ({ page, context }) => {
+  test('a swatch’s Copy button copies its hex by keyboard and announces it', async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await mockVam(page, { imagePng: checkerboardPng(RED, BLUE) });
     await page.goto(designUrl);
@@ -67,7 +67,8 @@ test.describe('palette on the design page', () => {
     const first = swatches(page).first();
     const hex = /#[0-9A-F]{6}/.exec((await first.getAttribute('aria-label')) ?? '')?.[0];
     expect(hex).toBeDefined();
-    await first.focus();
+    const copy = page.getByRole('button', { name: `Copy ${hex ?? ''}` });
+    await copy.focus();
     await page.keyboard.press('Enter');
 
     await expect(status(page)).toHaveText(`Copied ${hex ?? ''}`);

@@ -4,9 +4,11 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { isDesign } from '@/lib/vam/guards';
 import type { Design } from '@/lib/vam/types';
-import { DesignImage } from './DesignImage';
+import { DesignViewer } from './DesignViewer';
 import { PalettePanel } from './PalettePanel';
+import { useColourway } from './useColourway';
 import { usePalette } from './usePalette';
+import { useRecolour } from './useRecolour';
 
 type Result = { key: string; outcome: { design: Design } | { error: 'not_found' | 'failed' } };
 
@@ -54,31 +56,24 @@ function Facts({ design }: { design: Design }) {
 
 function Loaded({ design }: { design: Design }) {
   const palette = usePalette();
+  const colourway = useColourway(palette.swatches);
+  const recolour = useRecolour({
+    image: palette.image,
+    swatches: palette.swatches,
+    targets: colourway.targets,
+    active: colourway.hasEdits,
+  });
   return (
     <article>
       {/* React 19 hoists <title> into <head>: each design gets its own page title (WCAG 2.4.2). */}
       <title>{`${design.title} · Colourway Studio`}</title>
       <BackLink />
       <div className="mt-6 grid gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div>
-          <div className="flex aspect-[4/3] max-h-[80vh] items-center justify-center bg-mat">
-            <DesignImage
-              imageBaseUrl={design.imageBaseUrl}
-              size={1600}
-              alt={`${design.title}${design.objectType ? `, ${design.objectType.toLowerCase()}` : ''}`}
-              priority
-              className="max-h-full max-w-full object-contain"
-              onLoad={(event) => {
-                palette.onImage(event.currentTarget);
-              }}
-              onError={palette.onImageError}
-            />
-          </div>
-        </div>
+        <DesignViewer design={design} palette={palette} colourway={colourway} recolour={recolour} />
         <div>
           <h1 className="font-serif text-4xl leading-tight">{design.title}</h1>
           <Facts design={design} />
-          <PalettePanel palette={palette} />
+          <PalettePanel palette={palette} colourway={colourway} />
           {design.description ? (
             <div className="mt-8 space-y-4 leading-relaxed whitespace-pre-line">
               {design.description.split('\n\n').map((paragraph, index) => (
