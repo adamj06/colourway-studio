@@ -341,3 +341,11 @@ describe('top-up cap constant', () => {
     expect((palette as Record<string, unknown>)['TOP_UP_FACTOR']).toBe(2);
   });
 });
+
+describe('extractPalette: abandoned runs', () => {
+  it('throws rather than returning null if a stop callback is smuggled in', () => {
+    const img = buildImage(2, 1, (x) => ({ rgb: x === 0 ? [255, 0, 0] : [0, 0, 255] }));
+    const options = { k: 4, shouldStop: () => true } as unknown as Parameters<typeof extractPalette>[1];
+    expect(() => extractPalette(img, options)).toThrow('Palette extraction was abandoned');
+  });
+});

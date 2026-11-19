@@ -83,5 +83,7 @@ export function extractPaletteFromSamples(samples: Float64Array, options: Sample
 
 export function extractPalette(pixels: PixelBuffer, options: PaletteOptions): Swatch[] {
   const swatches = extractPaletteFromSamples(sampleLabPixels(pixels), options);
-  return swatches as Swatch[];
+  // Only null when `shouldStop` abandons the run, and this entry point never passes one.
+  if (swatches === null) throw new Error('Palette extraction was abandoned');
+  return swatches;
 }
