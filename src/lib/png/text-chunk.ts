@@ -78,7 +78,7 @@ function locate(png: Uint8Array): Located[] {
 }
 
 /** Returns a copy of the PNG with the entries as tEXt chunks right after IHDR. The input is not modified. */
-export function insertTextChunks(png: Uint8Array, entries: readonly TextEntry[]): Uint8Array {
+export function insertTextChunks(png: Uint8Array, entries: readonly TextEntry[]): Uint8Array<ArrayBuffer> {
   const ihdr = locate(png)[0];
   if (!ihdr) throw new Error('PNG has no IHDR');
   const added = entries.map(textChunk);

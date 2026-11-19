@@ -6,9 +6,8 @@ import { isDesign } from '@/lib/vam/guards';
 import type { Design } from '@/lib/vam/types';
 import { DesignViewer } from './DesignViewer';
 import { PalettePanel } from './PalettePanel';
-import { useColourway } from './useColourway';
-import { usePalette } from './usePalette';
-import { useRecolour } from './useRecolour';
+import { SharePanel } from './SharePanel';
+import { useDesignColourway } from './useDesignColourway';
 
 type Result = { key: string; outcome: { design: Design } | { error: 'not_found' | 'failed' } };
 
@@ -55,14 +54,7 @@ function Facts({ design }: { design: Design }) {
 }
 
 function Loaded({ design }: { design: Design }) {
-  const palette = usePalette();
-  const colourway = useColourway(palette.swatches);
-  const recolour = useRecolour({
-    image: palette.image,
-    swatches: palette.swatches,
-    targets: colourway.targets,
-    active: colourway.hasEdits,
-  });
+  const { palette, colourway, recolour, share, linkUnreadable } = useDesignColourway();
   return (
     <article>
       {/* React 19 hoists <title> into <head>: each design gets its own page title (WCAG 2.4.2). */}
@@ -74,6 +66,12 @@ function Loaded({ design }: { design: Design }) {
           <h1 className="font-serif text-4xl leading-tight">{design.title}</h1>
           <Facts design={design} />
           <PalettePanel palette={palette} colourway={colourway} />
+          {linkUnreadable ? (
+            <p role="status" className="mt-2 text-sm">
+              This link’s colours couldn’t be read, so the original palette is shown.
+            </p>
+          ) : null}
+          <SharePanel systemNumber={design.systemNumber} {...share} />
           {design.description ? (
             <div className="mt-8 space-y-4 leading-relaxed whitespace-pre-line">
               {design.description.split('\n\n').map((paragraph, index) => (

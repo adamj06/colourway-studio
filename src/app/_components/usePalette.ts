@@ -2,9 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Swatch } from '@/lib/colour/types';
-import { createPaletteClient, type PaletteClient, type PaletteRequest } from './paletteClient';
+import { createPaletteClient, type KnownSwatch, type PaletteClient, type PaletteRequest } from './paletteClient';
+import { labOfHex } from './recolourClient';
 
 export const DEFAULT_K = 6;
+const MIN_K = 4;
+const MAX_K = 8;
 
 export type PaletteStatus = 'waiting' | 'loading' | 'ready' | 'error' | 'unavailable';
 
@@ -29,8 +32,18 @@ type Outcome = { tag: string; swatches: Swatch[] | null };
  * has loaded) and terminated on unmount. The answer is matched to the current k and attempt by tag, so a late
  * answer for an older k can never be shown.
  */
-export function usePalette(): PaletteView {
-  const [k, setK] = useState(DEFAULT_K);
+export function usePalette(fromLink: readonly string[] | null = null): PaletteView {
+  // A palette from a share link is used as it is (its shares are measured, nothing is extracted) until k is changed.
+  const known = useRef<KnownSwatch[] | null>(
+    fromLink === null ? null : fromLink.map((hex) => ({ hex, lab: labOfHex(hex) })),
+  );
+  const [k, setRequestedK] = useState(() =>
+    fromLink === null ? DEFAULT_K : Math.min(MAX_K, Math.max(MIN_K, fromLink.length)),
+  );
+  const setK = useCallback((next: number) => {
+    known.current = null;
+    setRequestedK(next);
+  }, []);
   const [attempt, setAttempt] = useState(0);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
@@ -46,9 +59,14 @@ export function usePalette(): PaletteView {
 
   useEffect(() => {
     if (image === null) return;
-    const client = createPaletteClient(image, latest.current, (answeredTag, swatches) => {
-      setOutcome({ tag: answeredTag, swatches });
-    });
+    const client = createPaletteClient(
+      image,
+      latest.current,
+      (answeredTag, swatches) => {
+        setOutcome({ tag: answeredTag, swatches });
+      },
+      known.current,
+    );
     clientRef.current = client;
     return () => {
       client.dispose();

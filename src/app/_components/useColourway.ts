@@ -11,6 +11,8 @@ import {
 import type { Swatch } from '@/lib/colour/types';
 
 export type ColourwayView = {
+  /** The whole colourway: the palette it belongs to and the edits made to it. */
+  state: ColourwayState;
   /** The colour each swatch should have now: its edit, or its original. */
   targets: string[];
   originals: readonly string[];
@@ -31,13 +33,18 @@ const isEdited = (state: ColourwayState, index: number): boolean => index in sta
  * the edits pointed at no longer exist. The reset happens during render, so no frame ever shows edits against a
  * palette they do not belong to.
  */
-export function useColourway(swatches: Swatch[]): ColourwayView {
+export function useColourway(swatches: Swatch[], fromLink: ColourwayState | null = null): ColourwayView {
   const hexes = swatches.map((swatch) => swatch.hex);
   const key = hexes.join(',');
-  const [state, dispatch] = useReducer(colourwayReducer, hexes, initialColourway);
-  const [seenKey, setSeenKey] = useState(key);
+  // A colourway opened from a link starts with that link's edits; they belong to its own palette only.
+  const [state, dispatch] = useReducer(colourwayReducer, undefined, () => fromLink ?? initialColourway(hexes));
+  // For a link the palette is known before the swatches have been measured, so the key starts from the link's own.
+  const linkKey = fromLink?.original.join(',');
+  const [seenKey, setSeenKey] = useState(linkKey ?? key);
   const [showOriginal, setShowOriginal] = useState(false);
-  if (seenKey !== key) {
+  // Until the link's swatches arrive the palette is empty: that is waiting, not a change of palette.
+  const waitingForLink = key === '' && seenKey === linkKey;
+  if (seenKey !== key && !waitingForLink) {
     setSeenKey(key);
     setShowOriginal(false);
     dispatch({ type: 'paletteChanged', hexes });
@@ -60,6 +67,7 @@ export function useColourway(swatches: Swatch[]): ColourwayView {
 
   const hasEdits = selectHasEdits(state);
   return {
+    state,
     targets: selectTargets(state),
     originals: state.original,
     hasEdits,

@@ -1,9 +1,12 @@
 import type { Swatch } from '@/lib/colour/types';
 import { responseSchema } from '@/workers/palette-protocol';
-import { postSnapshot, snapshotImage, type Snapshot } from './paletteImage';
+import { postShares, postSnapshot, snapshotImage, type Snapshot } from './paletteImage';
 
 /** What the UI wants analysed. `tag` identifies the state the answer belongs to (it comes back with the result). */
 export type PaletteRequest = { k: number; tag: string };
+
+/** A palette that is already known (from a share link): its colours, whose shares the worker will measure. */
+export type KnownSwatch = { hex: string; lab: Swatch['lab'] };
 
 export type PaletteClient = {
   /** Ask for a palette with a new k. A request still running in the worker is superseded and never shown. */
@@ -13,26 +16,54 @@ export type PaletteClient = {
 
 type Answer = { kind: 'fail' } | { kind: 'answer'; id: number; swatches: Swatch[] | null };
 
+/** The known swatches with the shares the worker measured, or a failure if the counts do not match. */
+function withShares(known: readonly KnownSwatch[], shares: readonly number[]): Swatch[] | null {
+  if (known.length !== shares.length) return null;
+  return known.map((swatch, index) => ({ ...swatch, share: shares[index] ?? 0 }));
+}
+
 /** A response that does not match the protocol, or an error with no request id, counts as a failure. */
-function interpret(data: unknown): Answer {
+function interpret(data: unknown, known: readonly KnownSwatch[] | null): Answer {
   const parsed = responseSchema.safeParse(data);
   if (!parsed.success || parsed.data.id === null) return { kind: 'fail' };
   const { id } = parsed.data;
-  return { kind: 'answer', id, swatches: parsed.data.type === 'palette' ? parsed.data.swatches : null };
+  if (parsed.data.type === 'palette') return { kind: 'answer', id, swatches: parsed.data.swatches };
+  if (parsed.data.type === 'shares') {
+    return known === null ? { kind: 'fail' } : { kind: 'answer', id, swatches: withShares(known, parsed.data.shares) };
+  }
+  return { kind: 'answer', id, swatches: null };
 }
 
 function releaseSnapshot(snapshot: Snapshot): void {
   if (snapshot.kind === 'bitmap') snapshot.bitmap.close();
 }
 
-/** Posts the snapshot; a bitmap that could not be transferred is still ours to release. */
-function postOrRelease(worker: Worker, snapshot: Snapshot, id: number, k: number): void {
+/**
+ * Posts the first request: extract a palette, or (for a palette that came from a share link) measure the known
+ * swatches. Either way the worker keeps the samples, so a later change of k needs no second image. A bitmap that
+ * could not be transferred is still ours to release.
+ */
+function postFirst(worker: Worker, snapshot: Snapshot, id: number, k: number, known: readonly KnownSwatch[] | null) {
   try {
-    postSnapshot(worker, snapshot, id, k);
+    if (known === null) postSnapshot(worker, snapshot, id, k);
+    else
+      postShares(
+        worker,
+        snapshot,
+        id,
+        known.map((swatch) => swatch.lab),
+      );
   } catch (error) {
     releaseSnapshot(snapshot);
     throw error;
   }
+}
+
+function openWorker(onFailure: () => void): Worker {
+  const worker = new Worker(new URL('../../workers/palette.worker.ts', import.meta.url), { type: 'module' });
+  worker.onerror = onFailure;
+  worker.onmessageerror = onFailure;
+  return worker;
 }
 
 /**
@@ -43,8 +74,8 @@ export function createPaletteClient(
   image: HTMLImageElement,
   first: PaletteRequest,
   onResult: (tag: string, swatches: Swatch[] | null) => void,
+  known: readonly KnownSwatch[] | null = null,
 ): PaletteClient {
-  const worker = new Worker(new URL('../../workers/palette.worker.ts', import.meta.url), { type: 'module' });
   const tags = new Map<number, string>();
   let latest = first;
   let analysed = false;
@@ -64,9 +95,11 @@ export function createPaletteClient(
     worker.terminate();
     if (!stopped) onResult(latest.tag, null);
   };
+  // `fail` only runs after the worker exists (it is an event handler), so the order here is safe.
+  const worker = openWorker(fail);
 
   worker.onmessage = (event: MessageEvent<unknown>) => {
-    const answer = interpret(event.data);
+    const answer = interpret(event.data, known);
     if (answer.kind === 'fail') {
       fail();
       return;
@@ -76,8 +109,6 @@ export function createPaletteClient(
     if (stopped || answer.id !== newestId || tag === undefined) return;
     onResult(tag, answer.swatches);
   };
-  worker.onerror = fail;
-  worker.onmessageerror = fail;
 
   snapshotImage(image)
     .then((snapshot) => {
@@ -85,7 +116,7 @@ export function createPaletteClient(
         releaseSnapshot(snapshot);
         return;
       }
-      postOrRelease(worker, snapshot, startRequest(latest), latest.k);
+      postFirst(worker, snapshot, startRequest(latest), latest.k, known);
       analysed = true;
     })
     .catch(fail);
