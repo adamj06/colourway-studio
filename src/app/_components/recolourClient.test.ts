@@ -90,10 +90,10 @@ describe('createRecolourClient: one request at a time', () => {
     for (const tag of ['b', 'c', 'd']) client.request(request(tag));
 
     worker().emit(image(1));
-    expect(onResult).toHaveBeenCalledExactlyOnceWith('a', expect.objectContaining({ width: 1 }));
+    expect(onResult).toHaveBeenCalledExactlyOnceWith('a', expect.objectContaining({ width: 1 }), false);
 
     worker().emit(image(2));
-    expect(onResult).toHaveBeenLastCalledWith('d', expect.objectContaining({ width: 1 }));
+    expect(onResult).toHaveBeenLastCalledWith('d', expect.objectContaining({ width: 1 }), false);
   });
 
   it('ignores an answer that does not belong to the request in flight', async () => {
@@ -136,6 +136,16 @@ describe('createRecolourClient: preview then final', () => {
     ).toHaveLength(1);
   });
 
+  it('marks a frame final only when it answers the full-quality request', async () => {
+    const { onResult } = await readyClient();
+    worker().emit(image(1));
+    expect(onResult).toHaveBeenLastCalledWith('a', expect.objectContaining({ width: 1 }), false);
+
+    await vi.advanceTimersByTimeAsync(SETTLE_MS);
+    worker().emit(image(2));
+    expect(onResult).toHaveBeenLastCalledWith('a', expect.objectContaining({ width: 1 }), true);
+  });
+
   it('waits for a slow preview before sending the final, and draws both', async () => {
     const { onResult } = await readyClient();
     await vi.advanceTimersByTimeAsync(SETTLE_MS * 2);
@@ -153,17 +163,17 @@ describe('createRecolourClient: failures and disposal', () => {
   it('reports a failed prepare (an error answering id 0) as a failure, and later requests fail at once', async () => {
     const { client, onResult } = await readyClient();
     worker().emit({ type: 'error', id: 0, message: 'Could not read the image.' });
-    expect(onResult).toHaveBeenCalledExactlyOnceWith('a', null);
+    expect(onResult).toHaveBeenCalledExactlyOnceWith('a', null, false);
     expect(worker().terminated).toBe(true);
 
     client.request(request('b'));
-    expect(onResult).toHaveBeenLastCalledWith('b', null);
+    expect(onResult).toHaveBeenLastCalledWith('b', null, false);
   });
 
   it('reports an error answering the request in flight as a failed frame', async () => {
     const { onResult } = await readyClient();
     worker().emit({ type: 'error', id: 1, message: 'Recolouring failed.' });
-    expect(onResult).toHaveBeenCalledExactlyOnceWith('a', null);
+    expect(onResult).toHaveBeenCalledExactlyOnceWith('a', null, false);
   });
 
   it('sends and reports nothing after dispose, and stops the worker', async () => {

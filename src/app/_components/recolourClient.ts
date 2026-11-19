@@ -97,13 +97,13 @@ function createSettler(queue: (queued: Queued) => void, isLive: () => boolean) {
 /** The one request in the worker and the newest change waiting behind it. Ids count up from 1 (0 is the prepare). */
 function createSendQueue(post: (id: number, queued: Queued) => void, canSend: () => boolean) {
   let nextId = PREPARE_ID;
-  let inFlight: { id: number; tag: string } | null = null;
+  let inFlight: { id: number; tag: string; quality: Quality } | null = null;
   let waiting: Queued | null = null;
   const pump = () => {
     if (!canSend() || inFlight !== null || waiting === null) return;
     const queued = waiting;
     waiting = null;
-    inFlight = { id: ++nextId, tag: queued.request.tag };
+    inFlight = { id: ++nextId, tag: queued.request.tag, quality: queued.quality };
     post(inFlight.id, queued);
   };
   return {
@@ -112,12 +112,12 @@ function createSendQueue(post: (id: number, queued: Queued) => void, canSend: ()
       waiting = queued;
       pump();
     },
-    /** The tag of the request `id` answers, if it is the one in flight (which then ends); undefined for anything else. */
-    answered(id: number): string | undefined {
+    /** The tag and quality of the request `id` answers, if it is the one in flight (which then ends); else undefined. */
+    answered(id: number): { tag: string; quality: Quality } | undefined {
       if (inFlight?.id !== id) return undefined;
-      const { tag } = inFlight;
+      const { tag, quality } = inFlight;
       inFlight = null;
-      return tag;
+      return { tag, quality };
     },
   };
 }
@@ -135,7 +135,7 @@ export function createRecolourClient(
   image: HTMLImageElement,
   sources: Lab[],
   first: RecolourRequest,
-  onResult: (tag: string, frame: Frame | null) => void,
+  onResult: (tag: string, frame: Frame | null, final: boolean) => void,
 ): RecolourClient {
   const worker = new Worker(new URL('../../workers/recolour.worker.ts', import.meta.url), { type: 'module' });
   let latest = first;
@@ -154,7 +154,7 @@ export function createRecolourClient(
     broken = true;
     settler.cancel();
     worker.terminate();
-    if (!stopped) onResult(latest.tag, null);
+    if (!stopped) onResult(latest.tag, null, false);
   };
 
   worker.onmessage = (event: MessageEvent<unknown>) => {
@@ -164,9 +164,9 @@ export function createRecolourClient(
       return;
     }
     // Only the answer to the request in flight is drawn: anything else (late, or for another request) is ignored.
-    const tag = stopped ? undefined : sender.answered(answer.id);
-    if (tag === undefined) return;
-    onResult(tag, answer.frame);
+    const answered = stopped ? undefined : sender.answered(answer.id);
+    if (answered === undefined) return;
+    onResult(answered.tag, answer.frame, answered.quality === 'final');
     sender.pump();
   };
   worker.onerror = fail;
@@ -184,7 +184,7 @@ export function createRecolourClient(
     request(next) {
       latest = next;
       if (broken) {
-        if (!stopped) onResult(next.tag, null);
+        if (!stopped) onResult(next.tag, null, false);
         return;
       }
       if (prepared) settler.change(next);

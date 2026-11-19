@@ -13,6 +13,8 @@ import {
 export type RecolourView = {
   /** The newest recoloured picture for the current palette, or null (nothing to show yet, or it failed). */
   frame: Frame | null;
+  /** True when `frame` is the full-quality answer for the targets as they are now (not a preview, not out of date). */
+  settled: boolean;
   failed: boolean;
   retry: () => void;
 };
@@ -26,9 +28,13 @@ type Args = {
   active: boolean;
 };
 
-type Outcome = { tag: string; frame: Frame | null };
+type Outcome = { tag: string; frame: Frame | null; final: boolean };
 
 const labsOf = (hexes: string): Lab[] => (hexes === '' ? [] : hexes.split(',').map(labOfHex));
+
+/** The frame is the full-quality answer for exactly the targets asked for now. */
+const isSettled = (outcome: Outcome | null, tag: string): boolean =>
+  outcome !== null && outcome.frame !== null && outcome.final && outcome.tag === tag;
 
 /**
  * Recoloured frames for one design image. The worker is created lazily, only once a colour has been changed, and
@@ -52,8 +58,8 @@ export function useRecolour({ image, swatches, targets, active }: Args): Recolou
 
   useEffect(() => {
     if (!active || image === null) return;
-    const client = createRecolourClient(image, labsOf(sourcesKey), latest.current, (answeredTag, frame) => {
-      setOutcome({ tag: answeredTag, frame });
+    const client = createRecolourClient(image, labsOf(sourcesKey), latest.current, (answeredTag, frame, final) => {
+      setOutcome({ tag: answeredTag, frame, final });
     });
     clientRef.current = client;
     return () => {
@@ -69,5 +75,10 @@ export function useRecolour({ image, swatches, targets, active }: Args): Recolou
   }, []);
 
   const current = active && outcome?.tag.startsWith(`${epoch}|`) === true ? outcome : null;
-  return { frame: current?.frame ?? null, failed: current?.frame === null && current.tag === tag, retry };
+  return {
+    frame: current?.frame ?? null,
+    settled: isSettled(current, tag),
+    failed: current?.frame === null && current.tag === tag,
+    retry,
+  };
 }
