@@ -55,3 +55,9 @@ V&A images load **directly from `framemark.vam.ac.uk` in the browser**. There is
 - The colour maths lives in pure functions, which are easy to unit and mutation test.
 - Large images are downscaled for analysis; full resolution is used only for export.
 - If the V&A ever removes the CORS header, the `@external` test fails in the daily contract workflow. The fallback would be an allowlisted image proxy route with caching, and a new ADR.
+
+## Amendment, 2026-11-19: palette top-up (issue #19)
+
+Merging near-duplicate clusters could leave fewer swatches than the k picked. Extraction now re-runs k-means with one more cluster (up to 2k) until k distinct swatches remain, then keeps the k largest. It stops early when an extra cluster adds no distinct swatch twice in a row (`TOP_UP_PATIENCE`), because on noise and gradients the extra clusters only split into near-duplicates. Cancellation is unchanged: every run is abandoned between iterations when superseded.
+
+Measured in node on 40,000 samples, against a single run: an image with k distinct colours is unchanged (one run). An image short of distinct colours (a narrow gradient, or noisy paper with three strong colours) costs three runs: 0.9 s at k=4 and 1.6 to 1.7 s at k=8, against 0.27 s and 0.49 to 0.52 s for one run. Letting the loop run to the 2k cap cost up to 6.8 s at k=8 on the same images, so it was rejected. These are synthetic worst cases; no real-design timings were taken.

@@ -20,11 +20,20 @@ test.describe('palette on the design page', () => {
 
     await expect(status(page)).toHaveText('Palette ready: 2 colours');
     await expect(swatches(page)).toHaveCount(2);
+    await expect(page.getByText('This design only has 2 clearly different colours.')).toBeVisible();
     const labels = await swatches(page).evaluateAll((els) => els.map((el) => el.getAttribute('aria-label')));
     expect(labels.sort()).toEqual([
       `Colour 1 of 2, ${BLUE.toUpperCase()}, 50% of the design. Change colour`,
       `Colour 2 of 2, ${RED.toUpperCase()}, 50% of the design. Change colour`,
     ]);
+  });
+
+  test('a 3-swatch share link does not claim the design has only 3 colours', async ({ page }) => {
+    const cw = [RED, BLUE, '#27AE60'].map((hex) => hex.slice(1)).join('.');
+    await mockVam(page, { imagePng: bandsPng([RED, BLUE, '#27AE60', '#F1C40F', '#8E44AD']) });
+    await page.goto(`${designUrl}?cw=${cw}`);
+    await expect(status(page)).toHaveText('Palette ready: 3 colours');
+    await expect(page.getByText(/clearly different colour/)).toHaveCount(0);
   });
 
   test('defaults to 6 colours and changing k updates the palette', async ({ page }) => {

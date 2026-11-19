@@ -3,6 +3,7 @@ import {
   changedMessage,
   CLEARED_MESSAGE,
   coloursCount,
+  fewerColoursMessage,
   formatShare,
   RESET_ALL_MESSAGE,
   resetMessage,
@@ -50,5 +51,16 @@ describe('coloursCount', () => {
     expect(coloursCount(1)).toBe('1 colour');
     expect(coloursCount(2)).toBe('2 colours');
     expect(coloursCount(6)).toBe('6 colours');
+  });
+});
+
+describe('fewerColoursMessage', () => {
+  it('says how many clearly different colours the design has', () => {
+    expect(fewerColoursMessage(3)).toBe('This design only has 3 clearly different colours.');
+    expect(fewerColoursMessage(2)).toBe('This design only has 2 clearly different colours.');
+  });
+
+  it('uses the singular for one colour', () => {
+    expect(fewerColoursMessage(1)).toBe('This design only has 1 clearly different colour.');
   });
 });
