@@ -8,7 +8,7 @@
 A colourway has to live in the URL query string (no accounts, no database), so a link reproduces it exactly. A link is a public contract: once one is shared, the format has to keep working. Two things make "exactly" hard:
 
 - The palette is extracted in the browser from a downscaled canvas. Downscaling and colour handling differ a little between browsers, so re-running extraction from a link could give slightly different swatches than the sharer saw.
-- Edits are stored against swatch positions, and a palette can merge to fewer than the requested `k`.
+- Edits are stored against swatch positions, and a palette can still have fewer than the requested `k` swatches when the image has fewer distinct colours (extraction tops up to `k` first).
 
 ## Options considered
 
@@ -30,5 +30,5 @@ Validation is one zod schema for the whole grammar (CLAUDE.md: zod at every boun
 - The format is now a contract. Changes need a new parameter name or a version marker, not a silent change to `cw`.
 - A link opened later reflects the current V&A image for that object. If the museum replaces the image, an old link recolours the new one.
 - Duplicate swatch colours are valid in a link but behave like one swatch: shares and recolouring go to the lowest index, so an edit on a later duplicate has no visible effect. Extraction rarely produces exact duplicates, so this is documented, not rejected.
-- A link with fewer than 4 swatches (a palette that merged down) opens fine; the colours control then shows its nearest setting.
+- A link with fewer than 4 swatches (an image with few distinct colours) opens fine; the colours control then shows its nearest setting.
 - Opening a link costs one share computation (about one pass over at most 40,000 samples) instead of a k-means run.

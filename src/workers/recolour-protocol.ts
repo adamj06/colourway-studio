@@ -6,7 +6,7 @@ import { MAX_K } from './palette-protocol';
 /** Largest image side the worker accepts. The UI sends at most 1600 px; the cap bounds memory regardless. */
 export const MAX_RECOLOUR_SIDE = 2048;
 
-/** A palette can have fewer swatches than the k that was asked for (near-identical colours merge), down to one. */
+/** A palette can have fewer swatches than the k that was asked for (the image has fewer than k clearly different colours, even after extraction tops up), down to one. */
 export const MIN_SWATCHES = 1;
 
 const id = z.number().int().nonnegative();

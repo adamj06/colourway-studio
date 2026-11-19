@@ -20,6 +20,7 @@ test.describe('palette on the design page', () => {
 
     await expect(status(page)).toHaveText('Palette ready: 2 colours');
     await expect(swatches(page)).toHaveCount(2);
+    await expect(page.getByText('This design only has 2 clearly different colours.')).toBeVisible();
     const labels = await swatches(page).evaluateAll((els) => els.map((el) => el.getAttribute('aria-label')));
     expect(labels.sort()).toEqual([
       `Colour 1 of 2, ${BLUE.toUpperCase()}, 50% of the design. Change colour`,

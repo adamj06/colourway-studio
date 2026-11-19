@@ -55,3 +55,5 @@ V&A images load **directly from `framemark.vam.ac.uk` in the browser**. There is
 - The colour maths lives in pure functions, which are easy to unit and mutation test.
 - Large images are downscaled for analysis; full resolution is used only for export.
 - If the V&A ever removes the CORS header, the `@external` test fails in the daily contract workflow. The fallback would be an allowlisted image proxy route with caching, and a new ADR.
+
+- **Top-up (issue #19).** Merging near-duplicate clusters used to leave fewer swatches than the k picked. Extraction now re-runs k-means with one more cluster (up to 2k) until k distinct swatches remain, then keeps the k largest. Most images need no extra run; each extra run costs about one k-means run at the larger k. Timed on 40,000 synthetic samples (node): 260 to 270 ms at k=4 and 443 to 451 ms at k=8 including any top-up; the worst case is bounded by the 2k cap and, as before, is abandoned between iterations when superseded.
