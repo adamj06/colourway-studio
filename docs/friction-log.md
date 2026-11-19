@@ -258,7 +258,7 @@ Template:
 - **Doing:** 006-wall-preview, about to report the feature done after `npm run verify:clean` passed.
 - **What went wrong:** I treated `verify:clean` as the same as CI, but CI runs `npm run test -- --coverage` and `verify:clean` runs plain `test`. Overall line coverage was 79.18% against the 80% gate because a browser-only `.ts` file under `src/app` (`wallDraw.ts`) counts and had 0%. My first fix (extracting the pure plan into `src/lib/wall`) was not enough: 79.25%. I also never ran coverage myself before calling it green.
 - **Resolved by:** The code-reviewer found it. Unit tests for the drawing code with a fake canvas (80.4%), not an exclusion or a lower threshold.
-- **Prevention:** Proposed, not applied (`scripts/verify-clean.mjs` is guarded, and CLAUDE.md's "verify:clean sees what CI sees" would then be true): replace `const STEPS = ['format:check', 'lint', 'typecheck', 'test', 'build', 'size'];` with steps that carry their own arguments, running `npm run test -- --coverage` in place of `npm run test`. Needs Adam's OK.
+- **Prevention:** Applied with Adam's OK (`scripts/verify-clean.mjs` is guarded, and CLAUDE.md's "verify:clean sees what CI sees" would then be true): replace `const STEPS = ['format:check', 'lint', 'typecheck', 'test', 'build', 'size'];` with steps that carry their own arguments, running `npm run test -- --coverage` in place of `npm run test`. The step is now `test -- --coverage`; a full run passes at 80.4%.
 - **Caught by:** reviewer agent
 
 ## 2026-11-19 02:10: An edit script corrupted a file's encoding
