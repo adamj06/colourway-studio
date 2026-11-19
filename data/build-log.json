@@ -81,5 +81,23 @@
     ],
     "reviewFindingsFixed": 8,
     "prUrl": null
+  },
+  {
+    "id": "005-share-export",
+    "title": "Share a colourway by link and export it as a PNG",
+    "date": "2026-11-19",
+    "summary": "The colourway lives in the URL as cw (the full palette, original~edit per swatch, ADR 0005), so a link reproduces it exactly: opening one uses its own palette and edits and runs no k-means. Because a link carries no per-swatch share, a new pure swatchShares (nearest swatch in CIELAB) is answered by a new palette-worker message, which also keeps the samples so a later change of k needs no second image. The address follows the state after the 250 ms settle through history.replaceState, with no history entry per drag. Copy link builds the URL from state and falls back to a read-only field; Export PNG saves the settled full-quality frame (or the original design when nothing is edited) with Source and Software tEXt credit chunks, written by a small pure PNG module (CRC checked against a pinned python zlib run) and lazy-loaded. Unreadable links are ignored with a polite message. decodeColourway validates with one zod schema. Gates: first-load JS stayed at 181 kB gzip (limit 200), 1,445 unit tests, 51 e2e tests (18 new, three @smoke), lint, typecheck and a clean verify:clean. Honest notes: (1) The first review pass found two real bugs that my own tests and e2e run had missed. Next's patched replaceState skips its router sync when given window.history.state (which carries __NA), so a later router commit could write the old URL back and drop cw; fixed by passing null and proven by an e2e test that calls router.refresh(). And a palette tag of attempt:k let the link's old answer match again after k went 6, 5, 6, which then wiped the user's edits; fixed with a generation counter in the tag. (2) My first swatchShares returned [NaN] for no swatches; the tests caught it. (3) I first wrote the decoder by hand on the claim that zod is not shipped to the browser; that was wrong (the design page already ships it through the palette protocol) and the project rules require zod at every boundary, so I rewrote it, with the 500-state round-trip tests as the safety net. I also had that wrong claim in the ADR and corrected it. (4) One test-writer assertion was wrong: it expected no role=alert on the page, but Next's route announcer is always an empty alert; I narrowed it to alerts with text and kept the intent. (5) I added a worker request, a getter for the known palette and a generation to usePalette, which pushed several functions past the length gate; I extracted helpers rather than loosen it. Not done: a unit test for the hooks (no React test library; the new behaviour is covered end to end), and four review items left on purpose: disabled buttons leave the tab order (aria-disabled would keep the reason reachable), the Link copied or Image exported message persists after later edits, the unreadable-link notice is a static role=status that may not be announced, and duplicate swatch colours or links with fewer than four swatches are documented in ADR 0005, not rejected.",
+    "models": ["claude-opus-5-5", "claude-sonnet-5-5"],
+    "subagents": ["test-writer", "code-reviewer", "security-reviewer"],
+    "humanInterventions": [
+      "Adam interrupted my first run of /feature, which had already checked out main while exploring, and re-issued it; I planned from there and had to switch back to feat/004-recolour.",
+      "Planning decisions: stack on feat/004-recolour because it was not merged, store the full palette in the URL (not k plus edit indexes), export the 1600 px settled frame, and keep the PNG attribution chunk.",
+      "When I found that a link carries no per-swatch share, Adam chose computing shares from the image in the palette worker, over omitting them or putting them in the URL.",
+      "Not human-caught: the Next router bug, the palette-tag race, the swatchShares NaN and my wrong zod claim were found by the code reviewer, the test-writer's tests and my own re-reading of the project rules. Adam did not need to correct them.",
+      "The guard hook blocked a shell script I used to append this entry (it matched guardrail-file wording inside the script text, a false positive); I did not work around it and used the Edit tool on the data file instead.",
+      "The budget guard noted spend over the soft limit and growing context on several prompts; I relayed each and finished the feature before compacting."
+    ],
+    "reviewFindingsFixed": 21,
+    "prUrl": "https://github.com/adamj06/colourway-studio/pull/15"
   }
 ]

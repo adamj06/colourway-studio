@@ -40,6 +40,40 @@ export function encodePng(width: number, height: number, pick: (x: number, y: nu
   ]);
 }
 
+export type ParsedPng = {
+  width: number;
+  height: number;
+  chunks: Array<{ type: string; data: Buffer }>;
+  /** tEXt chunks as keyword -> text (Latin-1). */
+  text: Record<string, string>;
+};
+
+/** Minimal strict PNG reader for asserting on downloads: checks the signature and every chunk CRC. */
+export function parsePng(bytes: Buffer): ParsedPng {
+  if (!bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    throw new Error('not a PNG: bad signature');
+  }
+  const chunks: ParsedPng['chunks'] = [];
+  let at = 8;
+  while (at < bytes.length) {
+    const length = bytes.readUInt32BE(at);
+    const type = bytes.toString('latin1', at + 4, at + 8);
+    const data = bytes.subarray(at + 8, at + 8 + length);
+    const stored = bytes.readUInt32BE(at + 8 + length);
+    if (crc32(bytes.subarray(at + 4, at + 8 + length)) !== stored) throw new Error(`bad CRC in ${type} chunk`);
+    chunks.push({ type, data });
+    at += 12 + length;
+  }
+  const ihdr = chunks[0];
+  if (ihdr?.type !== 'IHDR') throw new Error('first chunk is not IHDR');
+  const text: Record<string, string> = {};
+  for (const c of chunks.filter((chunk) => chunk.type === 'tEXt')) {
+    const nul = c.data.indexOf(0);
+    text[c.data.toString('latin1', 0, nul)] = c.data.toString('latin1', nul + 1);
+  }
+  return { width: ihdr.data.readUInt32BE(0), height: ihdr.data.readUInt32BE(4), chunks, text };
+}
+
 /** Even-sized checkerboard of two colours: its palette is exactly those two colours at 50% each. */
 export function checkerboardPng(hexA: string, hexB: string, size = 64): Buffer {
   const a = hexToTriple(hexA);

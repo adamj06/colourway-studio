@@ -2,6 +2,7 @@
 // palette.worker.ts is a thin wrapper that feeds it messages.
 import { extractPaletteSteps } from '../lib/colour/palette';
 import { sampleLabPixels } from '../lib/colour/sample';
+import { swatchShares } from '../lib/colour/shares';
 import { macrotask } from './macrotask';
 import { requestSchema, type PaletteRequest, type PaletteResponse } from './palette-protocol';
 
@@ -29,13 +30,17 @@ export function createPaletteHandler(deps: PaletteHandlerDeps = {}): PaletteHand
   async function run(request: PaletteRequest, ticket: number, post: (r: PaletteResponse) => void): Promise<void> {
     const isStale = () => latest !== ticket;
     // Only a valid analyse replaces the cache, and only after validation, so a bad request can't wipe a good image.
-    if (request.type === 'analyse') samples = sampleLabPixels(request.image);
+    if (request.type === 'analyse' || request.type === 'shares') samples = sampleLabPixels(request.image);
     if (samples === null) {
       post({ type: 'error', id: request.id, message: 'No image has been analysed yet.' });
       return;
     }
     await yieldTick();
     if (isStale()) return;
+    if (request.type === 'shares') {
+      post({ type: 'shares', id: request.id, shares: swatchShares(samples, request.labs) });
+      return;
+    }
     // One k-means iteration per step. Yielding between steps lets a newer message arrive; shouldStop then abandons
     // this run at the start of its next iteration, so a superseded run costs at most one more iteration.
     const steps = extractPaletteSteps(samples, { k: request.k, shouldStop: isStale });

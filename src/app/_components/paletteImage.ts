@@ -1,6 +1,7 @@
 // Browser-side helpers that turn the already loaded design image into something the palette worker can read.
 // No second download: the <img> is drawn (or bitmap-copied) at a downscaled size.
 import { fitWithin } from '@/lib/image/fit';
+import type { Lab } from '@/lib/colour/types';
 
 /** Longest side analysed. 600 px is plenty for a palette and keeps the worker fast. */
 export const ANALYSIS_MAX_SIDE = 600;
@@ -47,4 +48,13 @@ export function postSnapshot(worker: Worker, snapshot: Snapshot, id: number, k: 
     return;
   }
   worker.postMessage({ type: 'analyse', id, k, image: snapshot.image }, [snapshot.image.data.buffer]);
+}
+
+/** Like postSnapshot, but asks how much of the image each of these swatches covers instead of extracting a palette. */
+export function postShares(worker: Worker, snapshot: Snapshot, id: number, labs: readonly Lab[]): void {
+  if (snapshot.kind === 'bitmap') {
+    worker.postMessage({ type: 'shares-bitmap', id, labs, bitmap: snapshot.bitmap }, [snapshot.bitmap]);
+    return;
+  }
+  worker.postMessage({ type: 'shares', id, labs, image: snapshot.image }, [snapshot.image.data.buffer]);
 }

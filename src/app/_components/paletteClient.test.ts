@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createPaletteClient } from './paletteClient';
-import { postSnapshot, snapshotImage, type Snapshot } from './paletteImage';
+import { postShares, postSnapshot, snapshotImage, type Snapshot } from './paletteImage';
 
-vi.mock('./paletteImage', () => ({ snapshotImage: vi.fn(), postSnapshot: vi.fn() }));
+vi.mock('./paletteImage', () => ({ snapshotImage: vi.fn(), postSnapshot: vi.fn(), postShares: vi.fn() }));
 
 class FakeWorker {
   static last: FakeWorker | null = null;
@@ -47,6 +47,10 @@ beforeEach(() => {
   // Stands in for the real transfer: records which id and k the first (analyse) request carried.
   vi.mocked(postSnapshot).mockImplementation((target, _snapshot, id, k) => {
     target.postMessage({ type: 'analyse', id, k });
+  });
+  // Stands in for the real transfer of a link palette: records the request type and the labs asked about.
+  vi.mocked(postShares).mockImplementation((target, snapshot, id, labs) => {
+    target.postMessage({ type: snapshot.kind === 'bitmap' ? 'shares-bitmap' : 'shares', id, labs });
   });
 });
 
@@ -256,5 +260,112 @@ describe('createPaletteClient and ImageBitmap ownership', () => {
     await flush();
     expect(owned.close).not.toHaveBeenCalled();
     expect(postSnapshot).toHaveBeenCalledOnce();
+  });
+});
+
+describe('createPaletteClient with a palette from a share link', () => {
+  type Known = { hex: string; lab: [number, number, number] };
+  const KNOWN: Known[] = [
+    { hex: '#112233', lab: [10, 1, 2] },
+    { hex: '#445566', lab: [40, 3, 4] },
+    { hex: '#778899', lab: [70, 5, 6] },
+  ];
+  const LABS = KNOWN.map((swatch) => swatch.lab);
+  const sharesAnswer = (id: number, shares: number[]) => ({ type: 'shares', id, shares });
+  const bitmap = () => ({ close: vi.fn() });
+
+  it('asks the worker to measure the known swatches (pixels snapshot) and does not analyse', async () => {
+    createPaletteClient(IMAGE, { k: 6, tag: '0:6' }, vi.fn(), () => KNOWN);
+    await flush();
+    expect(worker().posted).toEqual([{ type: 'shares', id: 0, labs: LABS }]);
+    expect(postSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('asks for shares-bitmap for a bitmap snapshot, carrying exactly the known labs', async () => {
+    vi.mocked(snapshotImage).mockResolvedValue({ kind: 'bitmap', bitmap: bitmap() as unknown as ImageBitmap });
+    createPaletteClient(IMAGE, { k: 6, tag: '0:6' }, vi.fn(), () => KNOWN);
+    await flush();
+    expect(worker().posted).toEqual([{ type: 'shares-bitmap', id: 0, labs: LABS }]);
+    expect(postSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('reads the known swatches when the snapshot is posted, not when the client is created', async () => {
+    let current: Known[] | null = KNOWN;
+    const client = createPaletteClient(IMAGE, { k: 6, tag: '0:6' }, vi.fn(), () => current);
+    current = null;
+    client.request({ k: 5, tag: '0:5' });
+    await flush();
+    expect(worker().posted).toEqual([{ type: 'analyse', id: 0, k: 5 }]);
+  });
+
+  it('does a normal analyse with the latest k when the getter returns null at post time', async () => {
+    const getter = vi.fn<() => Known[] | null>(() => null);
+    const client = createPaletteClient(IMAGE, { k: 6, tag: '0:6' }, vi.fn(), getter);
+    client.request({ k: 4, tag: '0:4' });
+    await flush();
+    expect(worker().posted).toEqual([{ type: 'analyse', id: 0, k: 4 }]);
+  });
+
+  it('maps a valid shares answer to swatches: hex and lab from the known ones, share from the answer, in order', async () => {
+    const onResult = vi.fn();
+    createPaletteClient(IMAGE, { k: 3, tag: '0:3' }, onResult, () => KNOWN);
+    await flush();
+    worker().emit(sharesAnswer(0, [0.5, 0.3, 0.2]));
+    expect(onResult).toHaveBeenCalledExactlyOnceWith('0:3', [
+      { hex: '#112233', lab: [10, 1, 2], share: 0.5 },
+      { hex: '#445566', lab: [40, 3, 4], share: 0.3 },
+      { hex: '#778899', lab: [70, 5, 6], share: 0.2 },
+    ]);
+  });
+
+  it('reports a failure when the shares answer has a different length from the known swatches', async () => {
+    const onResult = vi.fn();
+    createPaletteClient(IMAGE, { k: 3, tag: '0:3' }, onResult, () => KNOWN);
+    await flush();
+    worker().emit(sharesAnswer(0, [0.5, 0.5]));
+    expect(onResult).toHaveBeenCalledExactlyOnceWith('0:3', null);
+  });
+
+  it('treats a shares answer as a failure when nothing was measured (known was null at post time)', async () => {
+    let current: Known[] | null = KNOWN;
+    const onResult = vi.fn();
+    const client = createPaletteClient(IMAGE, { k: 6, tag: '0:6' }, onResult, () => current);
+    current = null;
+    client.request({ k: 5, tag: '0:5' });
+    await flush();
+    worker().emit(sharesAnswer(0, [0.5, 0.3, 0.2]));
+    expect(worker().terminated).toBe(true);
+    expect(onResult).toHaveBeenCalledExactlyOnceWith('0:5', null);
+  });
+
+  it('closes the bitmap and reports a failure when posting the shares request throws', async () => {
+    const owned = bitmap();
+    vi.mocked(snapshotImage).mockResolvedValue({ kind: 'bitmap', bitmap: owned as unknown as ImageBitmap });
+    vi.mocked(postShares).mockImplementation(() => {
+      throw new Error('DataCloneError');
+    });
+    const onResult = vi.fn();
+    createPaletteClient(IMAGE, { k: 3, tag: '0:3' }, onResult, () => KNOWN);
+    await flush();
+    expect(postShares).toHaveBeenCalledOnce();
+    expect(owned.close).toHaveBeenCalledOnce();
+    expect(onResult).toHaveBeenCalledExactlyOnceWith('0:3', null);
+  });
+
+  it('posts set-k with no second image for a later k change after the shares answer', async () => {
+    const onResult = vi.fn();
+    const client = createPaletteClient(IMAGE, { k: 3, tag: '0:3' }, onResult, () => KNOWN);
+    await flush();
+    worker().emit(sharesAnswer(0, [0.5, 0.3, 0.2]));
+    client.request({ k: 5, tag: '0:5' });
+
+    expect(worker().posted).toEqual([
+      { type: 'shares', id: 0, labs: LABS },
+      { type: 'set-k', id: 1, k: 5 },
+    ]);
+    expect(postShares).toHaveBeenCalledOnce();
+    expect(postSnapshot).not.toHaveBeenCalled();
+    worker().emit(palette(1, 5));
+    expect(onResult).toHaveBeenLastCalledWith('0:5', SWATCHES);
   });
 });
