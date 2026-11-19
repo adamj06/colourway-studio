@@ -17,10 +17,15 @@ import type { PaletteView } from './usePalette';
 
 const K_OPTIONS = [4, 5, 6, 7, 8] as const;
 
-function KControl(props: { k: number; disabled: boolean; onChange: (k: number) => void }) {
-  const { k, disabled, onChange } = props;
+function KControl(props: {
+  k: number;
+  disabled: boolean;
+  describedBy?: string | undefined;
+  onChange: (k: number) => void;
+}) {
+  const { k, disabled, describedBy, onChange } = props;
   return (
-    <fieldset className="mt-4 disabled:opacity-50" disabled={disabled}>
+    <fieldset className="mt-4 disabled:opacity-50" disabled={disabled} aria-describedby={describedBy}>
       <legend className="text-sm text-muted">Number of colours</legend>
       <div className="mt-2 flex flex-wrap gap-2">
         {K_OPTIONS.map((option) => (
@@ -230,6 +235,10 @@ export function PalettePanel({ palette, colourway }: { palette: PaletteView; col
     document.getElementById('palette-heading')?.focus();
   }, [retry]);
 
+  // A palette from a share link was never extracted, so "fewer than k" says nothing about the design.
+  const showFewer =
+    palette.status === 'ready' && !palette.linked && palette.swatches.length > 0 && palette.swatches.length < palette.k;
+
   return (
     <section aria-labelledby="palette-heading" className="mt-8">
       <h2 id="palette-heading" tabIndex={-1} className="font-serif text-2xl">
@@ -238,13 +247,16 @@ export function PalettePanel({ palette, colourway }: { palette: PaletteView; col
       <KControl
         k={palette.k}
         disabled={palette.status === 'waiting' || palette.status === 'unavailable'}
+        describedBy={showFewer ? 'palette-fewer-note' : undefined}
         onChange={changeK}
       />
       <p role="status" aria-live="polite" className="mt-4 min-h-6 text-sm text-muted">
         {message(palette, note)}
       </p>
-      {palette.status === 'ready' && palette.swatches.length > 0 && palette.swatches.length < palette.k ? (
-        <p className="mt-2 text-sm text-muted">{fewerColoursMessage(palette.swatches.length)}</p>
+      {showFewer ? (
+        <p id="palette-fewer-note" className="mt-2 text-sm text-muted">
+          {fewerColoursMessage(palette.swatches.length)}
+        </p>
       ) : null}
       {palette.status === 'error' ? (
         <p role="alert" className="mt-2">

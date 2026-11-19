@@ -142,3 +142,40 @@ describe('extractPaletteSteps with top-up runs: shouldStop', () => {
     expect(drain(extractPaletteSteps(samples(), { k: 4, shouldStop: () => false })).value).toHaveLength(4);
   });
 });
+
+describe('top-up run bounds', () => {
+  const iterationsOf = (samples: Float64Array, runK: number) =>
+    kmeansLab(samples, runK, mulberry32(DEFAULT_SEED))?.iterations ?? 0;
+  const yields = (samples: Float64Array, k: number) => {
+    const run = extractPaletteSteps(samples, { k });
+    let step = run.next();
+    let count = 0;
+    while (step.done !== true) {
+      count++;
+      step = run.next();
+    }
+    return { count, swatches: step.value };
+  };
+
+  it('gives up after TOP_UP_PATIENCE stalled extra runs on a gradient that cannot make k distinct swatches', () => {
+    const n = 4000;
+    const gradient = new Float64Array(n * 3);
+    for (let i = 0; i < n; i++) gradient.set([60 + (i / n) * 3, 5, 15], i * 3);
+    const { count, swatches } = yields(gradient, 5);
+    expect(swatches).toHaveLength(1);
+    // k=5, then k=6 and k=7 add nothing: exactly three runs, not the nine up to 2k.
+    const expected = [5, 6, 7].reduce((sum, runK) => sum + iterationsOf(gradient, runK) - 1, 0);
+    expect(count).toBe(expected);
+  });
+
+  it('makes exactly one run when the image has fewer distinct colours than k', () => {
+    const three = buildSamples([
+      [DISTINCT[0] as Lab, 50],
+      [DISTINCT[1] as Lab, 30],
+      [DISTINCT[2] as Lab, 20],
+    ]);
+    const { count, swatches } = yields(three, 8);
+    expect(swatches).toHaveLength(3);
+    expect(count).toBe(iterationsOf(three, 8) - 1);
+  });
+});
