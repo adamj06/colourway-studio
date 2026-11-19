@@ -6,6 +6,7 @@ import {
   changedMessage,
   CLEARED_MESSAGE,
   coloursCount,
+  fewerColoursMessage,
   formatShare,
   RESET_ALL_MESSAGE,
   resetMessage,
@@ -242,6 +243,9 @@ export function PalettePanel({ palette, colourway }: { palette: PaletteView; col
       <p role="status" aria-live="polite" className="mt-4 min-h-6 text-sm text-muted">
         {message(palette, note)}
       </p>
+      {palette.status === 'ready' && palette.swatches.length > 0 && palette.swatches.length < palette.k ? (
+        <p className="mt-2 text-sm text-muted">{fewerColoursMessage(palette.swatches.length)}</p>
+      ) : null}
       {palette.status === 'error' ? (
         <p role="alert" className="mt-2">
           We couldn’t read the colours from this image.{' '}
