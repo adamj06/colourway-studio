@@ -2,6 +2,8 @@ import type { Inline } from './ast';
 import { isSafeHref } from './href';
 
 const MAX_DEPTH = 6;
+// Bracket matching rescans for every `[`, so a pathological line is quadratic. Real prose is far shorter.
+const MAX_INLINE_LENGTH = 20_000;
 const PUNCTUATION = /^[!-/:-@[-`{-~]$/;
 
 interface Match {
@@ -97,7 +99,7 @@ function matchAt(src: string, i: number, depth: number): Match | null {
 
 /** Inline parser. Total: anything it cannot make sense of stays as literal text. */
 export function parseInline(src: string, depth = 0): Inline[] {
-  if (depth >= MAX_DEPTH) return [{ type: 'text', value: src }];
+  if (depth >= MAX_DEPTH || src.length > MAX_INLINE_LENGTH) return [{ type: 'text', value: src }];
   const out: Inline[] = [];
   let i = 0;
   while (i < src.length) {

@@ -5,8 +5,8 @@ function Tags({ label, values }: { label: string; values: readonly string[] }) {
   return (
     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
       <dt className="text-muted">{label}</dt>
-      {values.map((value) => (
-        <dd key={value} className="rounded bg-mat px-2 py-0.5 text-sm">
+      {values.map((value, index) => (
+        <dd key={`${String(index)}-${value}`} className="rounded bg-mat px-2 py-0.5 text-sm">
           {value}
         </dd>
       ))}
@@ -44,8 +44,8 @@ function Entry({ entry }: { entry: BuildLogEntry }) {
             Where the human steered ({entry.humanInterventions.length})
           </summary>
           <ul className="mt-2 list-disc space-y-2 pl-6 leading-relaxed">
-            {entry.humanInterventions.map((text) => (
-              <li key={text}>{text}</li>
+            {entry.humanInterventions.map((text, index) => (
+              <li key={`${String(index)}-${text}`}>{text}</li>
             ))}
           </ul>
         </details>

@@ -10,19 +10,23 @@ const date = z
   .regex(/^\d{4}-\d{2}-\d{2}$/)
   .refine(isRealDate, { message: 'not a real calendar date' });
 
+const PULL_PATH = /^\/[\w.-]+\/[\w.-]+\/pull\/\d+$/;
+
+/** A GitHub pull request URL: https, github.com, no credentials, `/owner/repo/pull/N`. */
+function isPullRequestUrl(s: string): boolean {
+  try {
+    const url = new URL(s);
+    return (
+      url.origin === 'https://github.com' && url.username === '' && url.password === '' && PULL_PATH.test(url.pathname)
+    );
+  } catch {
+    return false;
+  }
+}
+
 const prUrl = z
   .string()
-  .refine(
-    (s) => {
-      if (!s.startsWith('https://')) return false;
-      try {
-        return new URL(s).protocol === 'https:';
-      } catch {
-        return false;
-      }
-    },
-    { message: 'must be an https URL' },
-  )
+  .refine(isPullRequestUrl, { message: 'must be a https://github.com/owner/repo/pull/N URL' })
   .nullable();
 
 // Strict: a typo'd key in the log fails the build instead of being silently dropped.

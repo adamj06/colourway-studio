@@ -38,7 +38,7 @@ test.describe('how this was built', () => {
     await expect(adr.getByRole('heading', { level: 4, name: 'Context' })).toBeVisible();
   });
 
-  test('friction entries are newest first and the caught-by tally adds up to them', async ({ page }) => {
+  test('friction entries are newest first and the caught-by tally uses short, known categories', async ({ page }) => {
     await page.goto('/how-built');
     const friction = page.getByRole('region', { name: 'Friction log' });
     const titles = friction.locator('details h3');
@@ -49,8 +49,15 @@ test.describe('how this was built', () => {
     expect(stamps).toHaveLength(total);
     expect(stamps).toEqual([...stamps].sort().reverse());
 
+    // An entry can name two catchers, so the counts add up to at least the number of entries.
     const counts = await friction.locator('table tbody td:last-child').allInnerTexts();
-    expect(counts.reduce((n, c) => n + Number(c), 0)).toBe(total);
+    expect(counts.reduce((n, c) => n + Number(c), 0)).toBeGreaterThanOrEqual(total);
+    const names = await friction.locator('table tbody th, table tbody td:first-child').allInnerTexts();
+    expect(names.length).toBeGreaterThan(0);
+    expect(
+      names.every((name) => name.length <= 20),
+      `category names: ${names.join(' | ')}`,
+    ).toBe(true);
   });
 
   test('the cost section shows a grand total and a table per grouping', async ({ page }) => {

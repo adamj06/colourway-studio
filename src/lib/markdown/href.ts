@@ -32,5 +32,16 @@ export function isSafeHref(href: string): boolean {
   if (href.startsWith('#')) return true;
   if (href.startsWith('//')) return false;
   const scheme = group(SCHEME.exec(href), 1).toLowerCase();
-  return scheme === '' || scheme === 'http' || scheme === 'https';
+  if (scheme === '') return true;
+  return (scheme === 'http' || scheme === 'https') && isPlainWebUrl(href);
+}
+
+/** An absolute web link must parse and carry no `user:pass@` credentials (a phishing shape). */
+function isPlainWebUrl(href: string): boolean {
+  try {
+    const url = new URL(href);
+    return url.username === '' && url.password === '';
+  } catch {
+    return false;
+  }
 }

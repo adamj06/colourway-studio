@@ -102,3 +102,35 @@ describe('parseBuildLog edges', () => {
     if (!r.ok) expect(r.error.split('\n').length).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe('parseBuildLog prUrl is a GitHub pull request link', () => {
+  const rejected = (prUrl: string) => parseBuildLog([{ ...entry, prUrl }]).ok;
+
+  it('accepts github.com pull request URLs', () => {
+    expect(rejected('https://github.com/adamj06/colourway-studio/pull/16')).toBe(true);
+  });
+
+  it('rejects other hosts, lookalikes and credentials', () => {
+    for (const url of [
+      'https://evil.example/a/b/pull/1',
+      'https://github.com.evil.example/a/b/pull/1',
+      'https://user:pass@github.com/a/b/pull/1',
+      'https://user@github.com/a/b/pull/1',
+      'https://github.com:8443/a/b/pull/1',
+    ]) {
+      expect(rejected(url), url).toBe(false);
+    }
+  });
+
+  it('rejects github.com URLs that are not a pull request', () => {
+    for (const url of [
+      'https://github.com/a/b',
+      'https://github.com/a/b/issues/1',
+      'https://github.com/a/b/pull/x',
+      'https://github.com/a/b/pull/1/files',
+      'https://github.com/a/b/pull/',
+    ]) {
+      expect(rejected(url), url).toBe(false);
+    }
+  });
+});

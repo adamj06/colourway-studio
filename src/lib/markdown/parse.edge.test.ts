@@ -194,3 +194,40 @@ describe('isSafeHref', () => {
     }
   });
 });
+
+describe('hardening', () => {
+  it('refuses absolute links that carry credentials, and ones that do not parse', () => {
+    for (const href of [
+      'https://user@evil.example',
+      'https://user:pass@evil.example/x',
+      'http://a@b.example',
+      'https://',
+    ]) {
+      expect(isSafeHref(href), href).toBe(false);
+    }
+    expect(isSafeHref('https://example.com/a@b')).toBe(true);
+    expect(parseInline('[bank](https://user@evil.example)')).toEqual([text('bank')]);
+  });
+
+  it('does not take quadratic time on a long run of unmatched brackets', () => {
+    const start = performance.now();
+    parseInline('['.repeat(60_000));
+    expect(performance.now() - start).toBeLessThan(2000);
+  });
+
+  it('keeps an over-long inline as literal text', () => {
+    const long = '**x** '.repeat(5000);
+    expect(parseInline(long)).toEqual([text(long)]);
+  });
+
+  it('does not take quadratic time on a heading followed by a long run of spaces', () => {
+    const start = performance.now();
+    const blocks = parseMarkdown(`# a${' '.repeat(100_000)}b`);
+    expect(performance.now() - start).toBeLessThan(2000);
+    expect(blocks[0]).toMatchObject({ type: 'heading', level: 1 });
+  });
+
+  it('reads a heading with trailing spaces without them in the text', () => {
+    expect(parseMarkdown('## Title   ')[0]).toEqual({ type: 'heading', level: 2, children: [text('Title')] });
+  });
+});

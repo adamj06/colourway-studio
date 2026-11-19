@@ -8,7 +8,7 @@ export { parseInline } from './inline';
 
 const FENCE = /^ {0,3}(`{3,})[ \t]*([^`\s]*)[^`]*$/;
 const CLOSING_FENCE = /^ {0,3}(`{3,})[ \t]*$/;
-const HEADING = /^ {0,3}(#{1,6})[ \t]+(\S.*?)[ \t]*$/;
+const HEADING = /^ {0,3}(#{1,6})[ \t]+(\S.*)$/;
 const THEMATIC = /^ {0,3}([-*_])([ \t]*\1){2,}[ \t]*$/;
 const BULLET = /^ {0,3}[-*+][ \t]+(.*)$/;
 const ORDERED = /^ {0,3}\d{1,9}[.)][ \t]+(.*)$/;
@@ -22,7 +22,9 @@ interface Read {
 const isBlank = (line: string): boolean => line.trim() === '';
 
 function startsBlock(line: string): boolean {
-  return FENCE.test(line) || HEADING.test(line) || THEMATIC.test(line) || BULLET.test(line) || ORDERED.test(line);
+  return (
+    FENCE.test(line) || HEADING.test(line.trimEnd()) || THEMATIC.test(line) || BULLET.test(line) || ORDERED.test(line)
+  );
 }
 
 function readFence(lines: readonly string[], i: number): Read | null {
@@ -42,7 +44,8 @@ function readFence(lines: readonly string[], i: number): Read | null {
 }
 
 function readHeading(lines: readonly string[], i: number): Read | null {
-  const match = HEADING.exec(at(lines, i));
+  // Trimmed first: a lazy match followed by trailing-space pattern is quadratic on a long run of spaces.
+  const match = HEADING.exec(at(lines, i).trimEnd());
   if (!match) return null;
   const level = group(match, 1).length as 1 | 2 | 3 | 4 | 5 | 6;
   return { block: { type: 'heading', level, children: parseInline(group(match, 2)) }, next: i + 1 };
@@ -98,12 +101,11 @@ function readParagraph(lines: readonly string[], i: number): Read {
 }
 
 function readBlock(lines: readonly string[], i: number): Read {
-  const table = readTable(lines, i);
   return (
     readFence(lines, i) ??
     readHeading(lines, i) ??
     readThematicBreak(lines, i) ??
-    table ??
+    readTable(lines, i) ??
     readList(lines, i) ??
     readParagraph(lines, i)
   );

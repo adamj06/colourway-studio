@@ -102,11 +102,47 @@ export function parseFrictionLog(md: string): FrictionEntry[] {
     .sort((a, b) => compare(b.timestamp, a.timestamp));
 }
 
+// The categories named in the friction log template (plus the PR review bot). Longest first, so that
+// "commit hooks" and "human plan review" win over the shorter "hook" and "human" inside them.
+const CATEGORIES: readonly { label: string; match: RegExp }[] = [
+  ['human plan review', 'human plan review'],
+  ['Claude PR review', 'claude pr review'],
+  ['commit hooks', 'commit hooks'],
+  ['reviewer agent', 'reviewer agent'],
+  ['agent itself', 'agent itself'],
+  ['human', 'human'],
+  ['hook', 'hook'],
+  ['CI', 'ci'],
+].map(([label = '', word = '']) => ({
+  label,
+  match: new RegExp(String.raw`(?<![\p{L}\p{N}])${word}(?![\p{L}\p{N}])`, 'iu'),
+}));
+
+/**
+ * The categories one "Caught by" value names. Entries often say more than one thing
+ * ("hook (it fired) + human (diagnosis)"), so one entry can count towards several. Anything
+ * that names none of the known categories is "other"; an empty value is "unknown".
+ */
+export function caughtByCategories(caughtBy: string): string[] {
+  let rest = caughtBy;
+  const found: string[] = [];
+  for (const { label, match } of CATEGORIES) {
+    if (match.test(rest)) {
+      found.push(label);
+      rest = rest.replace(new RegExp(match.source, 'giu'), ' ');
+    }
+  }
+  if (found.length > 0) return found;
+  return [caughtBy.trim() === '' ? 'unknown' : 'other'];
+}
+
+/** Counts entries per category. An entry that names two categories counts towards both. */
 export function tallyCaughtBy(entries: readonly FrictionEntry[]): { who: string; count: number }[] {
   const counts = new Map<string, number>();
   for (const entry of entries) {
-    const who = entry.caughtBy.trim().toLowerCase() || 'unknown';
-    counts.set(who, (counts.get(who) ?? 0) + 1);
+    for (const who of caughtByCategories(entry.caughtBy)) counts.set(who, (counts.get(who) ?? 0) + 1);
   }
-  return [...counts].map(([who, count]) => ({ who, count })).sort((a, b) => b.count - a.count || compare(a.who, b.who));
+  return [...counts]
+    .map(([who, count]) => ({ who, count }))
+    .sort((a, b) => b.count - a.count || compare(a.who.toLowerCase(), b.who.toLowerCase()));
 }

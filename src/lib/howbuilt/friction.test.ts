@@ -5,15 +5,17 @@
 // Only `## YYYY-MM-DD HH:MM: title` headings outside fenced code blocks are entries.
 // Sort is timestamp descending (string compare is fine for this format) and STABLE: equal
 // timestamps keep their file order.  Continuation lines of a bullet are joined with a single space.
-// tallyCaughtBy: `who` is the trimmed, lower-cased caughtBy (kept whole, never split on "+" or "/");
-// an empty value counts as 'unknown'; sorted by count desc, then who ascending.
+// tallyCaughtBy maps each entry onto the template's categories (see caughtByCategories). One entry can name
+// several ("hook + human"), so it counts towards each. No known category is 'other'; empty is 'unknown'.
+// Sorted by count desc, then label ascending (case-insensitive). The first version of this spec kept each raw
+// value whole; on the real log that gave 14 rows including a whole sentence, so it was wrong and was replaced.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 
-import { parseFrictionLog, tallyCaughtBy } from './friction';
+import { caughtByCategories, parseFrictionLog, tallyCaughtBy } from './friction';
 
 // Shape copied from the real docs/friction-log.md (intro, summary table, template block, entries).
 const REAL_EXCERPT = `# Friction log
@@ -254,6 +256,44 @@ describe('parseFrictionLog', () => {
   });
 });
 
+describe('caughtByCategories', () => {
+  it.each([
+    ['human', ['human']],
+    ['Human', ['human']],
+    ['hook', ['hook']],
+    ['CI', ['CI']],
+    ['ci', ['CI']],
+    ['agent itself', ['agent itself']],
+    ['reviewer agent', ['reviewer agent']],
+    ['Claude PR review', ['Claude PR review']],
+  ])('maps %j to %j', (value, expected) => {
+    expect(caughtByCategories(value)).toEqual(expected);
+  });
+
+  it('prefers the longer category over the one inside it', () => {
+    expect(caughtByCategories('human plan review')).toEqual(['human plan review']);
+    expect(caughtByCategories('commit hooks')).toEqual(['commit hooks']);
+  });
+
+  it('finds several categories in one value and ignores the commentary', () => {
+    expect(caughtByCategories('hook (it fired) + human (diagnosis)')).toEqual(['human', 'hook']);
+    expect(caughtByCategories('hook + human')).toEqual(['human', 'hook']);
+    expect(caughtByCategories('human, while reviewing the tool list')).toEqual(['human']);
+    expect(caughtByCategories('reviewer agent (second round)')).toEqual(['reviewer agent']);
+  });
+
+  it('matches whole words only', () => {
+    expect(caughtByCategories('a hooked thing')).toEqual(['other']);
+    expect(caughtByCategories('specific')).toEqual(['other']);
+  });
+
+  it('says other for an unknown value and unknown for an empty one', () => {
+    expect(caughtByCategories('review (the lint run surfaced the first one)')).toEqual(['other']);
+    expect(caughtByCategories('')).toEqual(['unknown']);
+    expect(caughtByCategories('   ')).toEqual(['unknown']);
+  });
+});
+
 describe('tallyCaughtBy', () => {
   const e = (caughtBy: string) => ({
     timestamp: '2026-11-15 10:00',
@@ -276,56 +316,62 @@ describe('tallyCaughtBy', () => {
     ]);
   });
 
-  it('sorts by count descending', () => {
-    const r = tallyCaughtBy([e('a'), e('b'), e('b'), e('c'), e('c'), e('c')]);
-    expect(r.map((x) => x.who)).toEqual(['c', 'b', 'a']);
+  it('merges spellings of one category and shows the canonical label', () => {
+    expect(tallyCaughtBy([e('ci'), e('CI'), e(' Ci ')])).toEqual([{ who: 'CI', count: 3 }]);
   });
 
-  it('breaks ties by name ascending', () => {
-    const r = tallyCaughtBy([e('zeta'), e('alpha'), e('mid')]);
-    expect(r.map((x) => x.who)).toEqual(['alpha', 'mid', 'zeta']);
-  });
-
-  it('normalises case and surrounding whitespace into one category', () => {
-    expect(tallyCaughtBy([e('Human'), e(' human '), e('HUMAN\t')])).toEqual([{ who: 'human', count: 3 }]);
-  });
-
-  it('keeps a multi-word category whole and does not split on plus or slash', () => {
-    const r = tallyCaughtBy([e('human plan review'), e('hook + human'), e('reviewer agent / CI')]);
-    expect(r.map((x) => x.who).sort()).toEqual(['hook + human', 'human plan review', 'reviewer agent / ci']);
-    expect(r.every((x) => x.count === 1)).toBe(true);
-  });
-
-  it('counts empty and whitespace-only values as unknown', () => {
-    expect(tallyCaughtBy([e(''), e('   '), e('hook')])).toEqual([
-      { who: 'unknown', count: 2 },
+  it('counts an entry towards every category it names', () => {
+    expect(tallyCaughtBy([e('hook + human'), e('human')])).toEqual([
+      { who: 'human', count: 2 },
       { who: 'hook', count: 1 },
     ]);
   });
 
-  it('merges a literal "unknown" with empty values', () => {
-    expect(tallyCaughtBy([e(''), e('Unknown')])).toEqual([{ who: 'unknown', count: 2 }]);
+  it('sorts by count descending, then by name ascending ignoring case', () => {
+    const r = tallyCaughtBy([e('hook'), e('CI'), e('human'), e('human'), e('agent itself')]);
+    expect(r.map((x) => x.who)).toEqual(['human', 'agent itself', 'CI', 'hook']);
   });
 
-  it('has counts that sum to the number of entries', () => {
-    fc.assert(
-      fc.property(fc.array(fc.string(), { maxLength: 30 }), (xs) => {
-        const total = tallyCaughtBy(xs.map(e)).reduce((n, r) => n + r.count, 0);
-        expect(total).toBe(xs.length);
-      }),
-    );
+  it('counts empty values as unknown and unrecognised values as other', () => {
+    expect(tallyCaughtBy([e(''), e('   '), e('who knows'), e('hook')])).toEqual([
+      { who: 'unknown', count: 2 },
+      { who: 'hook', count: 1 },
+      { who: 'other', count: 1 },
+    ]);
   });
 
-  it('is sorted by count desc then name asc for any input', () => {
+  it('gives every entry at least one count and is sorted for any input', () => {
     fc.assert(
-      fc.property(fc.array(fc.constantFrom('a', 'b', 'c', 'D', '', 'hook'), { maxLength: 40 }), (xs) => {
+      fc.property(fc.array(fc.constantFrom('a', 'hook', 'Human', '', 'CI + hook', 'xyz'), { maxLength: 40 }), (xs) => {
         const r = tallyCaughtBy(xs.map(e));
+        expect(r.reduce((n, x) => n + x.count, 0)).toBeGreaterThanOrEqual(xs.length);
         for (let i = 1; i < r.length; i++) {
           const prev = r[i - 1]!;
           const cur = r[i]!;
-          expect(prev.count > cur.count || (prev.count === cur.count && prev.who < cur.who)).toBe(true);
+          expect(prev.count >= cur.count).toBe(true);
         }
       }),
     );
+  });
+
+  it('turns the real friction log into a short list of known categories', () => {
+    const entries = parseFrictionLog(readFileSync(join(process.cwd(), 'docs', 'friction-log.md'), 'utf8'));
+    const tally = tallyCaughtBy(entries);
+    const known = [
+      'human',
+      'human plan review',
+      'reviewer agent',
+      'CI',
+      'hook',
+      'commit hooks',
+      'agent itself',
+      'Claude PR review',
+      'other',
+      'unknown',
+    ];
+    expect(tally.map((t) => t.who).filter((w) => !known.includes(w))).toEqual([]);
+    expect(tally.length).toBeLessThanOrEqual(known.length);
+    // "human" is the most common catcher in the log's own summary table.
+    expect(tally[0]!.who).toBe('human');
   });
 });

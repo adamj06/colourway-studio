@@ -38,7 +38,11 @@ function loadBuildLog(root: string): BuildLogEntry[] {
 
 function loadAdrs(root: string): Adr[] {
   const dir = path.join(root, 'docs', 'adr');
-  const files = readdirSync(dir).map((filename) => ({ filename, content: read(root, 'docs', 'adr', filename) }));
+  // Regular files only: a symlink named like an ADR must not pull in content from elsewhere.
+  const names = readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => entry.name);
+  const files = names.map((filename) => ({ filename, content: read(root, 'docs', 'adr', filename) }));
   const { adrs, errors } = parseAdrs(files);
   if (errors.length > 0) throw new Error(`how-built: unreadable ADRs:\n${errors.join('\n')}`);
   return adrs;

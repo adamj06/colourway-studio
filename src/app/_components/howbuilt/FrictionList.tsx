@@ -43,7 +43,9 @@ export function FrictionList({ entries }: { entries: readonly FrictionEntry[] })
         <li key={`${entry.timestamp}-${String(index)}`} className="border-t border-rule py-3">
           <details>
             <summary className="cursor-pointer">
-              <h3 className="inline font-serif text-lg">{entry.title}</h3>
+              <h3 className="inline font-serif text-lg">
+                <Inlines nodes={parseInline(entry.title)} />
+              </h3>
               <span className="ml-3 text-sm text-muted">{entry.timestamp}</span>
             </summary>
             <dl className="mt-2 max-w-3xl space-y-2 leading-relaxed">

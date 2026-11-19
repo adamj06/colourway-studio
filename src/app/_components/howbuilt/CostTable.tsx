@@ -64,7 +64,8 @@ export function CostTable({ summary, skipped }: { summary: CostSummary; skipped:
         rows={summary.byModel.map(({ model, ...totals }) => ({ name: model, ...totals }))}
       />
       <p className="mt-4 text-sm text-muted">
-        Estimates from token counts, logged automatically at the end of each session.
+        Estimates from token counts, logged automatically at the end of each session. Each total is rounded on its own,
+        so rows can differ from the total by a cent.
         {skipped > 0
           ? ` ${String(skipped)} ledger ${skipped === 1 ? 'row was' : 'rows were'} unreadable and skipped.`
           : ''}

@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -101,5 +101,19 @@ describe('loadHowBuilt', () => {
     writeValidTree();
     rmSync(path.join(root, 'docs/friction-log.md'));
     expect(() => loadHowBuilt(root)).toThrow(/friction-log\.md/);
+  });
+});
+
+describe('loadHowBuilt reads regular files only', () => {
+  it('ignores a symlink named like an ADR', () => {
+    writeValidTree();
+    const outside = path.join(root, 'outside.md');
+    writeFileSync(outside, '# ADR 0002: Smuggled\n\n- **Status:** Accepted\n- **Date:** 2026-11-15\n');
+    try {
+      symlinkSync(outside, path.join(root, 'docs/adr/0002-smuggled.md'));
+    } catch {
+      return; // Creating symlinks needs a privilege some Windows setups lack; nothing to test there.
+    }
+    expect(loadHowBuilt(root).adrs.map((a) => a.title)).toEqual(['Thing']);
   });
 });
