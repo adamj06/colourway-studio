@@ -47,7 +47,11 @@ export function layoutTiles(options: LayoutOptions): Rect[] {
 
 export type TileSizeOptions = { wallW: number; repeats: number; regionW: number; regionH: number };
 
-/** The tile's size on the wall: `repeats` across, keeping the aspect ratio of the region. Whole pixels, at least 1. */
+/**
+ * The tile's size on the wall: `repeats` across, keeping the aspect ratio of the region. Whole pixels, at least 1.
+ * The width is rounded up, so `repeats` tiles always cover the wall (the last may overhang by a few pixels); rounding
+ * it to nearest left a sliver of an extra column at the wall's edge (7 repeats on 1200 px gave 7 x 171 = 1197).
+ */
 export function tileSize(options: TileSizeOptions): { w: number; h: number } {
   const wallW = positive(options.wallW, 'wallW');
   const regionW = positive(options.regionW, 'regionW');
@@ -56,6 +60,6 @@ export function tileSize(options: TileSizeOptions): { w: number; h: number } {
   if (!Number.isInteger(repeats) || repeats < MIN_REPEATS || repeats > MAX_REPEATS) {
     throw new RangeError(`repeats must be a whole number from ${String(MIN_REPEATS)} to ${String(MAX_REPEATS)}`);
   }
-  const w = wallW / repeats;
-  return { w: Math.max(1, Math.round(w)), h: Math.max(1, Math.round((w * regionH) / regionW)) };
+  const w = Math.max(1, Math.ceil(wallW / repeats));
+  return { w, h: Math.max(1, Math.round((w * regionH) / regionW)) };
 }

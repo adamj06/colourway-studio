@@ -209,9 +209,14 @@ describe('tileSize', () => {
     });
   });
 
-  it('rounds to whole pixels', () => {
+  it('rounds the width up to whole pixels so the repeats cover the wall', () => {
     const s = tileSize({ wallW: 1000, repeats: 3, regionW: 100, regionH: 100 });
-    expect(s).toEqual({ w: 333, h: 333 });
+    expect(s).toEqual({ w: 334, h: 334 });
+  });
+
+  it('computes the height from the whole-pixel width', () => {
+    // 1000 / 3 -> w 334; h = round(334 * 3 / 4) = round(250.5) = 251 (not round(333.33 * 0.75) = 250)
+    expect(tileSize({ wallW: 1000, repeats: 3, regionW: 4, regionH: 3 })).toEqual({ w: 334, h: 251 });
   });
 
   it('keeps a very thin tile at least 1 pixel high', () => {
@@ -228,7 +233,23 @@ describe('tileSize', () => {
 
   it.each([MIN_REPEATS, 3, DEFAULT_REPEATS, MAX_REPEATS])('accepts %s repeats', (repeats) => {
     const s = tileSize({ wallW: 1000, repeats, regionW: 100, regionH: 100 });
-    expect(s.w).toBe(Math.round(1000 / repeats));
+    expect(s.w).toBe(Math.ceil(1000 / repeats));
+  });
+
+  describe('repeats always cover the wall width with exactly that many columns', () => {
+    const cases: Array<[number, number]> = [
+      ...[2, 3, 4, 5, 6, 7, 8, 9, 10].map((r): [number, number] => [1200, r]),
+      ...[3, 6, 7, 9].map((r): [number, number] => [1000, r]),
+    ];
+
+    it.each(cases)('wall %s with %s repeats', (wallW, repeats) => {
+      const { w, h } = tileSize({ wallW, repeats, regionW: 800, regionH: 600 });
+      expect(repeats * w).toBeGreaterThanOrEqual(wallW);
+      expect(repeats * w - wallW).toBeLessThan(repeats);
+      const tiles = layoutTiles({ wallW, wallH: 600, tileW: w, tileH: h, repeat: 'straight' });
+      const columns = new Set(tiles.map((t) => t.x));
+      expect(columns.size).toBe(repeats);
+    });
   });
 
   it.each([1, 0, -4, 11, 4.5, Number.NaN, Infinity])('rejects %s repeats', (repeats) => {
