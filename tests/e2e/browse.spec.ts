@@ -118,6 +118,8 @@ test.describe('browse and open a design', () => {
 
     await page.getByRole('link', { name: 'Colourway Studio' }).focus();
     await page.keyboard.press('Tab');
+    await expect(page.getByRole('link', { name: 'How this was built' })).toBeFocused();
+    await page.keyboard.press('Tab');
     await expect(page.getByRole('searchbox')).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(page.getByRole('link').filter({ hasText: searchResult.items[0]!.title }).first()).toBeFocused();

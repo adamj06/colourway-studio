@@ -268,3 +268,19 @@ Template:
 - **Resolved by:** The Read tool flagged the encoding. I repaired the bytes, checked every file the script touched decoded as UTF-8, and confirmed Prettier had normalised the line endings.
 - **Prevention:** Use the Edit tool for source edits; if a script is really needed, `open(p, encoding='utf-8', newline='')`. No CLAUDE.md change proposed.
 - **Caught by:** agent itself
+
+## 2026-11-19 02:40: The test-writer's real-data assumptions were never run
+
+- **Doing:** 007-how-built, writing failing tests for the ledger, friction and tally parsers from the real files.
+- **What went wrong:** The test-writer asserted that the real ledger skipped 0 rows and that a tally kept every raw value whole, without running either against the real data. The real ledger had a row with an empty cost (so two of its tests contradicted each other), a table test passed cells to a helper that expects blocks (it could never pass), and the whole-value tally gave 14 messy rows on the real log.
+- **Resolved by:** Adam chose to fix the one bad ledger row. The table test call was fixed without weakening the assertion, and the tally spec was replaced after the code reviewer showed the real output.
+- **Prevention:** Ask the test-writer to run any test that reads a real file against the real file before reporting, and to print what the real data produces for each parser.
+- **Caught by:** agent itself
+
+## 2026-11-19 02:55: A static page was claimed from the docs, but bots bypass it
+
+- **Doing:** 007-how-built, reading repo files in a server component under Cache Components.
+- **What went wrong:** I relied on the Next docs (fs reads prerender into the static shell) and wrote in ADR 0006 that the route is plain prerendered HTML at runtime. The code reviewer found the prerender manifest lets link-preview bots bypass the static copy, and the file trace held only the ADRs, so a link pasted into Slack would have crashed on a missing friction log.
+- **Resolved by:** `outputFileTracingIncludes` for `/how-built` in next.config.ts, checked against the built `page.js.nft.json`, and ADR 0006 corrected.
+- **Prevention:** When a route reads files, inspect `.next/server/app/<route>/page.js.nft.json` after the build, and test with a bot user agent against a preview deploy.
+- **Caught by:** reviewer agent
