@@ -65,6 +65,7 @@ afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe('createRecolourClient: one request at a time', () => {
@@ -183,6 +184,27 @@ describe('createRecolourClient: failures and disposal', () => {
     await vi.advanceTimersByTimeAsync(SETTLE_MS * 2);
     expect(onResult).not.toHaveBeenCalled();
     expect(worker().recolours()).toHaveLength(1);
+    expect(worker().terminated).toBe(true);
+  });
+
+  it('prepares the worker from a bitmap snapshot and then recolours as usual', async () => {
+    const bitmap = { close: vi.fn() } as unknown as ImageBitmap;
+    vi.mocked(snapshotImage).mockResolvedValue({ kind: 'bitmap', bitmap });
+    await readyClient();
+    expect(worker().posted[0]).toMatchObject({ type: 'prepare-bitmap', id: 0, sources: SOURCES, bitmap });
+    expect(worker().recolours()).toHaveLength(1);
+    expect(bitmap.close).not.toHaveBeenCalled();
+  });
+
+  it('releases the bitmap and reports a failure when the worker cannot be sent the snapshot', async () => {
+    const bitmap = { close: vi.fn() } as unknown as ImageBitmap;
+    vi.mocked(snapshotImage).mockResolvedValue({ kind: 'bitmap', bitmap });
+    vi.spyOn(FakeWorker.prototype, 'postMessage').mockImplementation(() => {
+      throw new Error('DataCloneError');
+    });
+    const { onResult } = await readyClient();
+    expect(bitmap.close).toHaveBeenCalledOnce();
+    expect(onResult).toHaveBeenCalledExactlyOnceWith('a', null, false);
     expect(worker().terminated).toBe(true);
   });
 
