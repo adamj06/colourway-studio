@@ -114,5 +114,21 @@
     ],
     "reviewFindingsFixed": 10,
     "prUrl": "https://github.com/adamj06/colourway-studio/pull/16"
+  },
+  {
+    "id": "007-how-built",
+    "title": "How this was built: the project's own record as a page",
+    "date": "2026-11-19",
+    "summary": "A static /how-built page rendered at build time from data/build-log.json, docs/adr, docs/friction-log.md and docs/cost/ledger.csv: a build log per feature, collapsible ADRs and friction entries (newest first, with a caught-by tally), and cost totals by branch and model. The parsing is pure and tested in src/lib (a small Markdown subset parser with no html node and a link allowlist, plus parsers for the four sources); src/server/howbuilt-data.ts reads the files and throws on any invalid source, so a broken log fails the build instead of shipping half-rendered. ADR 0006 records the exception to 'server code is route handlers only'. 1,487 unit tests pass, there are 9 Playwright tests (axe, heading outline, no-JS render), and first-load JS for / is unchanged at 181 kB. Honest notes: (1) The test-writer assumed the real ledger had no bad rows without running it; it had one (a synthetic-model row with an empty est_usd), so two of its tests could not both pass. Adam chose to fix the data row rather than weaken a test. The cost hook still writes an empty est_usd for unpriced models and an empty branch on a detached HEAD, so the page will say rows were skipped; I did not change the hook. (2) One test-writer test passed an array of table cells to a helper that expects blocks, so it could never pass; I fixed the call without weakening the assertion. (3) The test-writer's tally spec kept each raw 'Caught by' value whole, which gave 14 messy rows on the real log (including a 110-character sentence); the code reviewer found it, and I replaced the spec with a mapping onto the template's categories (an entry can count towards two). (4) I claimed the page was static at runtime from the Next docs; the code reviewer showed link-preview bots bypass the prerendered copy and the file tracer only included the ADRs, so a pasted link would have crashed. Fixed with outputFileTracingIncludes, and ADR 0006 corrected. (5) The coverage gate (93.88% branches in src/lib against 95%) failed on my new code; I fixed it with a small tested helper and tests for real behaviours, not by lowering a threshold. Not fixed, listed in the PR: nested lists are flattened (ADR 0004 has one), headings sit inside <summary> so some screen readers may drop them from heading navigation, no post-build check that the route stays prerendered, relative links in docs would 404, a few inline edge cases (*** and double-backtick code, a table directly after a paragraph), and equal-timestamp friction entries stay in file order inside a newest-first list.",
+    "models": ["claude-opus-5-5", "claude-sonnet-5-5"],
+    "subagents": ["test-writer", "code-reviewer", "security-reviewer"],
+    "humanInterventions": [
+      "Planning decisions: Adam chose to stack feat/007-how-built on feat/006-wall-preview (main is still at 003) and chose a small in-house Markdown parser over adding a dependency. Adam approved the plan and acceptance criteria as written.",
+      "Adam chose to fix the one bad real ledger row (est_usd 0) when the test-writer's tests conflicted, instead of editing a test or relaxing the parser.",
+      "Not human-caught: the wrong table test, the failing coverage gate, the lint and type errors, the wrong tally spec, the runtime file-tracing crash, the quadratic parsing and the prUrl and link credential holes were found by running the tools and by the code and security reviewers. Adam did not need to correct anything else.",
+      "The budget guard noted growing spend and context on several prompts (over $17 against a $15 soft limit, 239k tokens by the end); I relayed each note and finished the feature before compacting."
+    ],
+    "reviewFindingsFixed": 10,
+    "prUrl": null
   }
 ]
