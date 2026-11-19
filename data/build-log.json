@@ -99,5 +99,20 @@
     ],
     "reviewFindingsFixed": 21,
     "prUrl": "https://github.com/adamj06/colourway-studio/pull/15"
+  },
+  {
+    "id": "006-wall-preview",
+    "title": "See the colourway tiled on a wall",
+    "date": "2026-11-19",
+    "summary": "A lazy-loaded wall preview on the design page: the live recoloured design (or the original) tiled on a wall canvas with skirting and floor, straight or half-drop, 2 to 10 repeats across, and a repeat region the user marks by dragging on the picture or with four number inputs. The maths is pure and fully tested in src/lib/wall (region clamping and conversion, tile layout, tile size, and a draw plan that rounds tile positions to whole pixels so half-drop columns meet exactly); the canvas code is a plain loop over that plan, unit tested with a fake canvas. Added 12 Playwright tests (pixel colours on the wall, drag, right-click, tap jitter, keyboard stepping, a failed image, axe) and a threat-model row and runbook row. First-load JS stays at 181 kB (the wall chunk is loaded on demand). Honest notes: (1) I reported the feature green after verify:clean, but CI also runs coverage, which verify:clean does not, and the overall line gate was at 79.2% against 80% because a browser-only .ts file under src/app counts; the code reviewer caught it, and extracting the plan was not enough, so the drawing code now has its own unit tests rather than an exclusion or a lower threshold. (2) The first half-drop e2e used a vertically banded image, so a broken half-drop could not fail it; it now uses horizontal bands, and I broke half-drop and the tap threshold on purpose to see the two new tests fail. (3) tileSize rounded the tile width to nearest, which left a 3 px sliver column at 7 and 9 repeats; the width now rounds up, which changed two of the test-writer's tests (a justified spec change, not a weakened test). (4) A Python edit script on Windows wrote two curly apostrophes as cp1252 bytes into the e2e spec; the Read tool flagged it as not UTF-8 and I repaired the bytes. Not fixed, and listed in the PR: the picker thumbnail and an offscreen full-size copy are each repainted on every recolour frame (the wall also follows preview-quality frames), the wall chunk starts loading before it scrolls into view, the region and repeat settings are not in the share link (out of scope, would change ADR 0005), a worst case of about 6,400 tile draws for a very thin region, and two nits (a stale full-size canvas kept after the source goes away, and the rectangle and wall derive the region slightly differently).",
+    "models": ["claude-opus-5-5", "claude-sonnet-5-5"],
+    "subagents": ["test-writer", "code-reviewer", "security-reviewer"],
+    "humanInterventions": [
+      "Planning decisions: Adam chose to stack feat/006-wall-preview on feat/005-share-export because main was still at 003, and chose a user-marked repeat region over tiling the whole photo or mirroring it. Adam approved the acceptance criteria as written.",
+      "Not human-caught: the failing coverage gate, the weak half-drop test, the tile-width sliver, the pointer and number-box edge cases and the missing threat-model update were all found by the code reviewer and security reviewer, not by Adam. The wrong drag test (it dragged where the picture was off screen) and the UTF-8 corruption were found by running the tests and by the Read tool. Adam did not need to correct anything.",
+      "The budget guard noted growing context on several prompts (above 165k tokens by the end); I relayed each note and finished the feature before compacting."
+    ],
+    "reviewFindingsFixed": 10,
+    "prUrl": null
   }
 ]
