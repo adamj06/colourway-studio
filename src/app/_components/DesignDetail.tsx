@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { isDesign } from '@/lib/vam/guards';
@@ -8,6 +9,16 @@ import { DesignViewer } from './DesignViewer';
 import { PalettePanel } from './PalettePanel';
 import { SharePanel } from './SharePanel';
 import { useDesignColourway } from './useDesignColourway';
+
+// Loaded on demand, so none of the wall code is in the first-load JS (docs/quality-gates.md, bundle size).
+const WallPreview = dynamic(() => import('./WallPreview').then((module) => module.WallPreview), {
+  ssr: false,
+  loading: () => (
+    <p role="status" className="mt-10 text-sm text-muted">
+      Loading the wall preview…
+    </p>
+  ),
+});
 
 type Result = { key: string; outcome: { design: Design } | { error: 'not_found' | 'failed' } };
 
@@ -54,14 +65,17 @@ function Facts({ design }: { design: Design }) {
 }
 
 function Loaded({ design }: { design: Design }) {
-  const { palette, colourway, recolour, share, linkUnreadable } = useDesignColourway();
+  const { palette, colourway, recolour, wall, share, linkUnreadable } = useDesignColourway();
   return (
     <article>
       {/* React 19 hoists <title> into <head>: each design gets its own page title (WCAG 2.4.2). */}
       <title>{`${design.title} · Colourway Studio`}</title>
       <BackLink />
       <div className="mt-6 grid gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <DesignViewer design={design} palette={palette} colourway={colourway} recolour={recolour} />
+        <div>
+          <DesignViewer design={design} palette={palette} colourway={colourway} recolour={recolour} />
+          <WallPreview source={wall.source} title={design.title} recoloured={wall.recoloured} />
+        </div>
         <div>
           <h1 className="font-serif text-4xl leading-tight">{design.title}</h1>
           <Facts design={design} />

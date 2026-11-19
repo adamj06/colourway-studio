@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { encodeColourway, readColourwayParam } from '@/lib/colourway/url';
 import type { ExportSource } from './exportPng';
 import { useColourway } from './useColourway';
@@ -59,10 +59,23 @@ export function useDesignColourway() {
   const encoded = colourway.hasEdits ? encodeColourway(colourway.state) : null;
   useShareUrl(encoded);
 
+  // What the wall tiles: the same picture the viewer shows (the live frame, preview quality included). Memoised, so
+  // the wall is only repainted when the picture really changes.
+  const wallFrame = colourway.showOriginal ? null : recolour.frame;
+  const wall = useMemo(() => {
+    const source: ExportSource | null = wallFrame
+      ? { kind: 'frame', frame: wallFrame }
+      : palette.image
+        ? { kind: 'image', image: palette.image }
+        : null;
+    return { source, recoloured: wallFrame !== null };
+  }, [wallFrame, palette.image]);
+
   return {
     palette,
     colourway,
     recolour,
+    wall,
     share: { encoded, ...exportState(colourway.hasEdits, recolour, palette.image, palette.status === 'unavailable') },
     /** A link was opened but its colours could not be read: the page shows the normal palette and says so. */
     linkUnreadable: link.kind === 'invalid' && !colourway.hasEdits,
