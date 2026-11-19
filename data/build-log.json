@@ -129,6 +129,6 @@
       "The budget guard noted growing spend and context on several prompts (over $17 against a $15 soft limit, 239k tokens by the end); I relayed each note and finished the feature before compacting."
     ],
     "reviewFindingsFixed": 10,
-    "prUrl": null
+    "prUrl": "https://github.com/adamj06/colourway-studio/pull/17"
   }
 ]
