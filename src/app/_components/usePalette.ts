@@ -15,6 +15,8 @@ export type PaletteView = {
   status: PaletteStatus;
   swatches: Swatch[];
   k: number;
+  /** True while the palette is the one a share link brought, before the user has changed k. */
+  linked: boolean;
   /** The decoded design image, once it has loaded (the recolour worker reads the same element). */
   image: HTMLImageElement | null;
   setK: (k: number) => void;
@@ -27,6 +29,21 @@ export type PaletteView = {
 
 type Outcome = { tag: string; swatches: Swatch[] | null };
 
+const knownFrom = (hexes: readonly string[] | null): KnownSwatch[] | null =>
+  hexes === null ? null : hexes.map((hex) => ({ hex, lab: labOfHex(hex) }));
+
+/** A link's palette is shown with k as near its size as the control allows. */
+const initialK = (hexes: readonly string[] | null): number =>
+  hexes === null ? DEFAULT_K : Math.min(MAX_K, Math.max(MIN_K, hexes.length));
+
+/** `answered`: swatches when the worker has answered for the current tag, null when it failed, undefined while waiting. */
+function statusOf(imageLoaded: boolean, imageFailed: boolean, answered: Swatch[] | null | undefined): PaletteStatus {
+  if (answered === null) return 'error';
+  if (answered !== undefined) return 'ready';
+  if (imageFailed) return 'unavailable';
+  return imageLoaded ? 'loading' : 'waiting';
+}
+
 /**
  * Palette state for one design image. The worker is created lazily (only on the design page, only after the image
  * has loaded) and terminated on unmount. The answer is matched to the current k and attempt by tag, so a late
@@ -34,14 +51,15 @@ type Outcome = { tag: string; swatches: Swatch[] | null };
  */
 export function usePalette(fromLink: readonly string[] | null = null): PaletteView {
   // A palette from a share link is used as it is (its shares are measured, nothing is extracted) until k is changed.
-  const known = useRef<KnownSwatch[] | null>(
-    fromLink === null ? null : fromLink.map((hex) => ({ hex, lab: labOfHex(hex) })),
-  );
-  const [k, setRequestedK] = useState(() =>
-    fromLink === null ? DEFAULT_K : Math.min(MAX_K, Math.max(MIN_K, fromLink.length)),
-  );
+  const [initial] = useState(() => knownFrom(fromLink));
+  const known = useRef(initial);
+  // Counts the user's own changes of k. It is part of every tag, so an answer for the link's palette can never be
+  // mistaken for the answer to a request made after k was changed (6, then 5, then 6 again).
+  const [generation, setGeneration] = useState(0);
+  const [k, setRequestedK] = useState(() => initialK(fromLink));
   const setK = useCallback((next: number) => {
     known.current = null;
+    setGeneration((value) => value + 1);
     setRequestedK(next);
   }, []);
   const [attempt, setAttempt] = useState(0);
@@ -49,7 +67,7 @@ export function usePalette(fromLink: readonly string[] | null = null): PaletteVi
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [imageFailed, setImageFailed] = useState(false);
   const clientRef = useRef<PaletteClient | null>(null);
-  const tag = `${String(attempt)}:${String(k)}`;
+  const tag = `${String(attempt)}:${String(k)}:${String(generation)}`;
   const latest = useRef<PaletteRequest>({ k, tag });
 
   useEffect(() => {
@@ -65,7 +83,7 @@ export function usePalette(fromLink: readonly string[] | null = null): PaletteVi
       (answeredTag, swatches) => {
         setOutcome({ tag: answeredTag, swatches });
       },
-      known.current,
+      () => known.current,
     );
     clientRef.current = client;
     return () => {
@@ -85,9 +103,15 @@ export function usePalette(fromLink: readonly string[] | null = null): PaletteVi
   }, []);
 
   const answered = outcome?.tag === tag ? outcome.swatches : undefined;
-  let status: PaletteStatus = image === null ? 'waiting' : 'loading';
-  if (imageFailed) status = 'unavailable';
-  if (answered === null) status = 'error';
-  else if (answered !== undefined) status = 'ready';
-  return { status, swatches: answered ?? [], k, image, setK, retry, onImage, onImageError };
+  return {
+    status: statusOf(image !== null, imageFailed, answered),
+    swatches: answered ?? [],
+    k,
+    linked: initial !== null && generation === 0,
+    image,
+    setK,
+    retry,
+    onImage,
+    onImageError,
+  };
 }

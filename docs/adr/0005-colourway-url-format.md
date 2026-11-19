@@ -29,4 +29,6 @@ Validation is one zod schema for the whole grammar (CLAUDE.md: zod at every boun
 - A shared link reproduces the same swatches and edits in any browser. The recoloured pixels can still differ very slightly, because the image is decoded by the viewer's own browser.
 - The format is now a contract. Changes need a new parameter name or a version marker, not a silent change to `cw`.
 - A link opened later reflects the current V&A image for that object. If the museum replaces the image, an old link recolours the new one.
+- Duplicate swatch colours are valid in a link but behave like one swatch: shares and recolouring go to the lowest index, so an edit on a later duplicate has no visible effect. Extraction rarely produces exact duplicates, so this is documented, not rejected.
+- A link with fewer than 4 swatches (a palette that merged down) opens fine; the colours control then shows its nearest setting.
 - Opening a link costs one share computation (about one pass over at most 40,000 samples) instead of a k-means run.

@@ -117,6 +117,49 @@ test.describe('the colourway in the URL', () => {
     await expect.poll(() => cwOf(page), { timeout: SETTLE_WAIT }).toBeNull();
   });
 
+  test('cw survives a router commit', async ({ page }) => {
+    await openChecker(page);
+    expect(
+      await page.evaluate(
+        () => typeof (window as unknown as { next?: { router?: { refresh?: unknown } } }).next?.router?.refresh,
+      ),
+      'window.next.router.refresh exists in the page',
+    ).toBe('function');
+    await editAndSettle(page, RED, GREEN);
+    const cw = cwOf(page);
+
+    await page.evaluate(() => {
+      (window as unknown as { next: { router: { refresh: () => void } } }).next.router.refresh();
+    });
+    await page.waitForTimeout(1_000);
+
+    expect(cwOf(page)).toBe(cw);
+  });
+
+  test('opening a link then changing the number of colours removes cw and extracts', async ({ page }) => {
+    const original = [RED, BLUE, '#27AE60', '#F1C40F', '#8E44AD'];
+    const cw = encodeColourway({ original, edits: { 0: GREEN } });
+    await recordWorkerMessages(page);
+    await mockVam(page, { imagePng: bandsPng(original) });
+    await page.goto(`${designUrl}?cw=${cw}`);
+    await expect(picker(page, GREEN)).toBeVisible();
+    await expect(recoloured(page)).toBeVisible();
+    expect(await workerMessages(page)).not.toContain('analyse-bitmap');
+
+    await kOption(page, 4).click();
+
+    await expect.poll(() => cwOf(page), { timeout: SETTLE_WAIT }).toBeNull();
+    await expect
+      .poll(async () => {
+        const messages = await workerMessages(page);
+        return messages.includes('analyse-bitmap') || messages.includes('set-k');
+      })
+      .toBe(true);
+    await expect(page.getByLabel(/^Colour \d+ of 4, /)).toHaveCount(4);
+    await expect(recoloured(page)).toHaveCount(0);
+    await expect(picker(page, GREEN)).toHaveCount(0);
+  });
+
   test('opening a link with cw shows the same swatches and recoloured design without extracting a palette @smoke', async ({
     page,
     context,
@@ -210,6 +253,49 @@ test.describe('Copy link', () => {
   });
 });
 
+test.describe('Copy link fallbacks', () => {
+  const failClipboard = (page: Page) =>
+    page.evaluate(() => {
+      Object.defineProperty(navigator.clipboard, 'writeText', {
+        value: () => Promise.reject(new DOMException('denied', 'NotAllowedError')),
+      });
+    });
+
+  test('Copy link falls back to the read-only field when navigator.clipboard is missing', async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+    });
+    await openChecker(page);
+    await editAndSettle(page, RED, GREEN);
+
+    await copyLink(page).click();
+
+    const field = page.getByRole('textbox', { name: /link/i });
+    await expect(field).toBeVisible();
+    await expect(field).toHaveAttribute('readonly', '');
+    await expect(field).toHaveValue(page.url());
+    await expect(field).toBeFocused();
+    await expect(
+      page.getByRole('status').filter({ hasText: 'We couldn’t copy the link. It is shown below to copy by hand.' }),
+    ).toBeVisible();
+  });
+
+  test('the manual link field follows later edits', async ({ page }) => {
+    await openChecker(page);
+    await editAndSettle(page, RED, GREEN);
+    await failClipboard(page);
+    await copyLink(page).click();
+    const field = page.getByRole('textbox', { name: /link/i });
+    await expect(field).toHaveValue(page.url());
+    const before = cwOf(page);
+
+    await picker(page, BLUE).fill(CYAN);
+    await expect.poll(() => cwOf(page), { timeout: SETTLE_WAIT }).not.toBe(before);
+
+    await expect.poll(async () => (await field.inputValue()) === page.url(), { timeout: SETTLE_WAIT }).toBe(true);
+  });
+});
+
 test.describe('Export PNG', () => {
   test('is disabled with an accessible reason until the full-quality frame exists', async ({ page }) => {
     await mockVam(page, { imagePng: bandsPng(THREE) });
@@ -230,6 +316,57 @@ test.describe('Export PNG', () => {
     release();
     await expect(ready(page, 3)).toBeVisible();
     await expect(exportPng(page)).toBeEnabled();
+  });
+
+  test('stays disabled while only a preview frame is showing', async ({ page }) => {
+    type Held = { __holdFinal: boolean; __held: Array<() => void> };
+    await page.addInitScript(() => {
+      const w = window as unknown as Held;
+      w.__holdFinal = false;
+      w.__held = [];
+      const original = Worker.prototype.postMessage;
+      (Worker.prototype as { postMessage: unknown }).postMessage = function (this: Worker, ...args: unknown[]) {
+        const message = args[0] as { type?: unknown; quality?: unknown } | null;
+        if (w.__holdFinal && message?.type === 'recolour' && message.quality === 'final') {
+          w.__held.push(() => {
+            Reflect.apply(original, this, args);
+          });
+          return undefined;
+        }
+        return Reflect.apply(original, this, args) as unknown;
+      };
+    });
+    await openChecker(page);
+    await page.evaluate(() => {
+      (window as unknown as Held).__holdFinal = true;
+    });
+
+    await picker(page, RED).fill(GREEN);
+
+    await expect(recoloured(page)).toBeVisible();
+    await expect.poll(() => page.evaluate(() => (window as unknown as Held).__held.length)).toBeGreaterThan(0);
+    await expect(exportPng(page)).toBeDisabled();
+    await expect(exportPng(page)).toHaveAccessibleDescription(/\S/);
+
+    await page.evaluate(() => {
+      const w = window as unknown as Held;
+      w.__holdFinal = false;
+      w.__held.splice(0).forEach((send) => {
+        send();
+      });
+    });
+    await expect(exportPng(page)).toBeEnabled({ timeout: SETTLE_WAIT });
+  });
+
+  test('explains itself when the recolouring fails', async ({ page }) => {
+    await openChecker(page);
+    await page.route('**/turbopack-worker-*.js', (route) => route.abort());
+
+    await picker(page, RED).fill(GREEN);
+
+    await expect(page.getByRole('alert').filter({ hasText: /couldn’t recolour/ })).toBeVisible();
+    await expect(exportPng(page)).toBeDisabled();
+    await expect(exportPng(page)).toHaveAccessibleDescription(/couldn.t recolour|can.t export/i);
   });
 
   test('downloads a valid PNG of the recoloured canvas with Source and Software text chunks @smoke', async ({

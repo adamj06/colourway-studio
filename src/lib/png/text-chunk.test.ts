@@ -209,3 +209,76 @@ describe('readTextChunks', () => {
     expect(() => readTextChunks(new TextEncoder().encode('not a png at all'))).toThrow(REAL_ERROR);
   });
 });
+
+/** Independent chunk builder (node:zlib crc32), so the oracle does not share code with the module under test. */
+function buildChunk(type: string, data: Uint8Array): Uint8Array {
+  const out = new Uint8Array(12 + data.length);
+  const view = new DataView(out.buffer);
+  view.setUint32(0, data.length);
+  out.set(Buffer.from(type, 'latin1'), 4);
+  out.set(data, 8);
+  view.setUint32(8 + data.length, crc32(out.subarray(4, 8 + data.length)));
+  return out;
+}
+
+describe('bytes after IEND', () => {
+  const TRAILING = new TextEncoder().encode('TRAILING-BYTES-AFTER-IEND');
+  const withTrailing = new Uint8Array([...fixture, ...TRAILING]);
+
+  it('insertTextChunks stops at IEND and keeps the trailing bytes untouched', () => {
+    const out = insertTextChunks(withTrailing, [SOURCE]);
+    expect(hex(out)).toBe(hex(new Uint8Array([...withReferenceChunk(), ...TRAILING])));
+  });
+
+  it('readTextChunks stops at IEND and ignores the trailing bytes', () => {
+    expect(readTextChunks(new Uint8Array([...withReferenceChunk(), ...TRAILING]))).toEqual([SOURCE]);
+  });
+
+  it('does not read a text chunk that sits after IEND', () => {
+    const after = buildChunk('tEXt', Buffer.from('Late\u0000no', 'latin1'));
+    expect(readTextChunks(new Uint8Array([...fixture, ...after]))).toEqual([]);
+  });
+});
+
+describe('a very large text chunk', () => {
+  it('readTextChunks reads a 200,000-byte tEXt chunk without throwing', () => {
+    const body = Buffer.alloc(200_000 - 4, 'x');
+    const data = new Uint8Array(Buffer.concat([Buffer.from('Big\u0000', 'latin1'), body]));
+    expect(data).toHaveLength(200_000);
+    const png = new Uint8Array([
+      ...fixture.subarray(0, IHDR_END),
+      ...buildChunk('tEXt', data),
+      ...fixture.subarray(IHDR_END),
+    ]);
+    const entries = readTextChunks(png);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]?.keyword).toBe('Big');
+    expect(entries[0]?.text).toHaveLength(200_000 - 4);
+    expect(entries[0]?.text).toBe('x'.repeat(200_000 - 4));
+  });
+});
+
+describe('keyword rules from the PNG specification (32-126 and 161-255, no consecutive spaces)', () => {
+  const attempt = (keyword: string) => () => insertTextChunks(fixture, [{ keyword, text: 'x' }]);
+
+  it('rejects consecutive spaces inside a keyword', () => {
+    expect(attempt('A  B')).toThrow(REAL_ERROR);
+  });
+
+  it.each([
+    ['0x01', '\u0001'],
+    ['0x1F', '\u001f'],
+    ['0x7F (DEL)', '\u007f'],
+    ['0x80', '\u0080'],
+    ['0x9F', '\u009f'],
+    ['0xA0 (no-break space)', ' '],
+  ])('rejects a keyword containing the control character %s', (_name, char) => {
+    expect(attempt(`A${char}B`)).toThrow(REAL_ERROR);
+  });
+
+  it('accepts a single interior space, 0x7E and 0xA1', () => {
+    expect(attempt('Creation Time')).not.toThrow();
+    expect(attempt('A~B')).not.toThrow();
+    expect(attempt('A¡B')).not.toThrow();
+  });
+});

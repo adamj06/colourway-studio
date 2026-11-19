@@ -14,7 +14,15 @@ function exportState(
   hasEdits: boolean,
   recolour: RecolourView,
   image: HTMLImageElement | null,
+  imageFailed: boolean,
 ): { source: ExportSource | null; waitingFor: string } {
+  // Say so when it will never become available, instead of promising it will.
+  if (imageFailed) {
+    return { source: null, waitingFor: 'Export isn’t available because the design image couldn’t be loaded.' };
+  }
+  if (recolour.failed) {
+    return { source: null, waitingFor: 'Export isn’t available because we couldn’t recolour this design.' };
+  }
   if (!hasEdits) {
     return {
       source: image === null ? null : { kind: 'image', image },
@@ -39,7 +47,8 @@ export function useDesignColourway() {
   const fromLink = link.kind === 'ok' ? link.state : null;
 
   const palette = usePalette(fromLink?.original ?? null);
-  const colourway = useColourway(palette.swatches, fromLink);
+  // The link's edits belong to the link's palette: once k has been changed they are gone, even while the new palette loads.
+  const colourway = useColourway(palette.swatches, palette.linked ? fromLink : null);
   const recolour = useRecolour({
     image: palette.image,
     swatches: palette.swatches,
@@ -54,7 +63,7 @@ export function useDesignColourway() {
     palette,
     colourway,
     recolour,
-    share: { encoded, ...exportState(colourway.hasEdits, recolour, palette.image) },
+    share: { encoded, ...exportState(colourway.hasEdits, recolour, palette.image, palette.status === 'unavailable') },
     /** A link was opened but its colours could not be read: the page shows the normal palette and says so. */
     linkUnreadable: link.kind === 'invalid' && !colourway.hasEdits,
   };

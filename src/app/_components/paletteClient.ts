@@ -59,6 +59,21 @@ function postFirst(worker: Worker, snapshot: Snapshot, id: number, k: number, kn
   }
 }
 
+/** Hands out request ids and remembers which tag each belongs to. Only the newest request's answer is ever shown. */
+function createRequestTracker() {
+  const tags = new Map<number, string>();
+  let nextId = 0;
+  let newestId = -1;
+  return {
+    start(request: PaletteRequest): number {
+      newestId = nextId++;
+      tags.set(newestId, request.tag);
+      return newestId;
+    },
+    tagIfNewest: (id: number): string | undefined => (id === newestId ? tags.get(id) : undefined),
+  };
+}
+
 function openWorker(onFailure: () => void): Worker {
   const worker = new Worker(new URL('../../workers/palette.worker.ts', import.meta.url), { type: 'module' });
   worker.onerror = onFailure;
@@ -74,22 +89,17 @@ export function createPaletteClient(
   image: HTMLImageElement,
   first: PaletteRequest,
   onResult: (tag: string, swatches: Swatch[] | null) => void,
-  known: readonly KnownSwatch[] | null = null,
+  /** Read when the first snapshot is posted, so a k chosen before then is honoured (see usePalette). */
+  known: () => readonly KnownSwatch[] | null = () => null,
 ): PaletteClient {
-  const tags = new Map<number, string>();
+  // What the first request measured, if it was a palette from a link: needed to read the answer.
+  let measuring: readonly KnownSwatch[] | null = null;
+  const requests = createRequestTracker();
   let latest = first;
   let analysed = false;
   let stopped = false;
   // Once the image or worker has failed, later k changes answer with the failure at once instead of waiting forever.
   let broken = false;
-  let nextId = 0;
-  let newestId = -1;
-
-  const startRequest = (request: PaletteRequest): number => {
-    newestId = nextId++;
-    tags.set(newestId, request.tag);
-    return newestId;
-  };
   const fail = () => {
     broken = true;
     worker.terminate();
@@ -99,14 +109,14 @@ export function createPaletteClient(
   const worker = openWorker(fail);
 
   worker.onmessage = (event: MessageEvent<unknown>) => {
-    const answer = interpret(event.data, known);
+    const answer = interpret(event.data, measuring);
     if (answer.kind === 'fail') {
       fail();
       return;
     }
     // Late answers to superseded requests are ignored: only the newest request id is ever shown.
-    const tag = tags.get(answer.id);
-    if (stopped || answer.id !== newestId || tag === undefined) return;
+    const tag = requests.tagIfNewest(answer.id);
+    if (stopped || tag === undefined) return;
     onResult(tag, answer.swatches);
   };
 
@@ -116,7 +126,8 @@ export function createPaletteClient(
         releaseSnapshot(snapshot);
         return;
       }
-      postFirst(worker, snapshot, startRequest(latest), latest.k, known);
+      measuring = known();
+      postFirst(worker, snapshot, requests.start(latest), latest.k, measuring);
       analysed = true;
     })
     .catch(fail);
@@ -128,7 +139,7 @@ export function createPaletteClient(
         if (!stopped) onResult(next.tag, null);
         return;
       }
-      if (analysed) worker.postMessage({ type: 'set-k', id: startRequest(next), k: next.k });
+      if (analysed) worker.postMessage({ type: 'set-k', id: requests.start(next), k: next.k });
     },
     dispose() {
       stopped = true;

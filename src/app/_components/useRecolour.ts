@@ -33,7 +33,7 @@ type Outcome = { tag: string; frame: Frame | null; final: boolean };
 const labsOf = (hexes: string): Lab[] => (hexes === '' ? [] : hexes.split(',').map(labOfHex));
 
 /** The frame is the full-quality answer for exactly the targets asked for now. */
-const isSettled = (outcome: Outcome | null, tag: string): boolean =>
+export const isSettled = (outcome: Outcome | null, tag: string): boolean =>
   outcome !== null && outcome.frame !== null && outcome.final && outcome.tag === tag;
 
 /**

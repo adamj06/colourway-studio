@@ -21,7 +21,8 @@ const image = z
     path: ['data'],
   });
 
-const lab = z.tuple([z.number(), z.number(), z.number()]);
+/** One Lab colour: three finite numbers. */
+export const lab = z.tuple([z.number(), z.number(), z.number()]);
 
 export const requestSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('analyse'), id, k, image }),

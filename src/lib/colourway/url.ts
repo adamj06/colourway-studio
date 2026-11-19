@@ -39,6 +39,11 @@ export function decodeColourway(value: string): ColourwayState | null {
 
 export type ColourwayParam = { kind: 'none' } | { kind: 'invalid' } | { kind: 'ok'; state: ColourwayState };
 
+/** The name of one `a=b` query part, decoded the way URLSearchParams decodes it (so `%63w` is `cw`). */
+function queryName(part: string): string {
+  return new URLSearchParams(part.split('=')[0]).keys().next().value ?? '';
+}
+
 /**
  * `href` with its `cw` parameter set to `encoded` (null removes it). Every other parameter, the path and the hash are
  * kept as they were. The value is written as is: URLSearchParams would escape the '~'. Throws a TypeError for a
@@ -49,7 +54,7 @@ export function colourwayHref(href: string, encoded: string | null): string {
   const kept = url.search
     .slice(1)
     .split('&')
-    .filter((part) => part !== '' && part.split('=')[0] !== 'cw');
+    .filter((part) => part !== '' && queryName(part) !== 'cw');
   if (encoded !== null) kept.push(`cw=${encoded}`);
   url.search = kept.join('&');
   return url.toString();

@@ -67,6 +67,40 @@ describe('colourwayHref', () => {
     expect(out.endsWith(`cw=${ENC}`)).toBe(true);
   });
 
+  describe('percent-encoded spellings of the cw key', () => {
+    const encodedKey = 'https://example.com/d?%63w=AAAAAA~BBBBBB&x=1';
+
+    it('leaves exactly one readable cw, equal to the new value, when the old one was spelled %63w', () => {
+      const out = new URL(colourwayHref(encodedKey, ENC));
+      expect(out.searchParams.getAll('cw')).toEqual([ENC]);
+      expect(readColourwayParam(out.search)).toEqual(readColourwayParam(`?cw=${ENC}`));
+      expect(readColourwayParam(out.search).kind).toBe('ok');
+      expect(out.searchParams.get('x')).toBe('1');
+    });
+
+    it('removes a %63w cw as well when given null', () => {
+      const out = new URL(colourwayHref(encodedKey, null));
+      expect(out.searchParams.getAll('cw')).toEqual([]);
+      expect(readColourwayParam(out.search)).toEqual({ kind: 'none' });
+      expect(out.searchParams.get('x')).toBe('1');
+    });
+
+    it('does not treat %43W (the key "CW", case matters) as cw: it is kept', () => {
+      const withValue = new URL(colourwayHref('https://example.com/d?%43W=keep', ENC));
+      expect(withValue.searchParams.get('CW')).toBe('keep');
+      expect(withValue.searchParams.getAll('cw')).toEqual([ENC]);
+      const removed = new URL(colourwayHref('https://example.com/d?%43W=keep&cw=AAAAAA', null));
+      expect(removed.searchParams.get('CW')).toBe('keep');
+      expect(removed.searchParams.getAll('cw')).toEqual([]);
+    });
+
+    it('keeps a "cw[]" param', () => {
+      const out = new URL(colourwayHref('https://example.com/d?cw[]=keep&cw=AAAAAA', ENC));
+      expect(out.searchParams.get('cw[]')).toBe('keep');
+      expect(out.searchParams.getAll('cw')).toEqual([ENC]);
+    });
+  });
+
   it.each(['', 'not a url', '/relative/only?x=1', '://nohost'])(
     'throws for the invalid href %j (the caller guards)',
     (href) => {

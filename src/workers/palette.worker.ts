@@ -8,7 +8,7 @@
 //  - anything else (the fallback path sends RGBA pixels, and 'set-k') goes straight to the validated handler.
 import { z } from 'zod';
 import { createPaletteHandler } from './palette-handler';
-import { MAX_IMAGE_SIDE, MAX_K, MIN_K, type PaletteResponse } from './palette-protocol';
+import { lab, MAX_IMAGE_SIDE, MAX_K, MIN_K, type PaletteResponse } from './palette-protocol';
 
 type WorkerScope = {
   onmessage: ((event: MessageEvent<unknown>) => void) | null;
@@ -36,10 +36,7 @@ const bitmapRequest = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('shares-bitmap'),
     id,
-    labs: z
-      .array(z.tuple([z.number(), z.number(), z.number()]))
-      .min(1)
-      .max(MAX_K),
+    labs: z.array(lab).min(1).max(MAX_K),
     bitmap: bitmapOf,
   }),
 ]);

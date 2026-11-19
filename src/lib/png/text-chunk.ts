@@ -36,6 +36,9 @@ function keywordBytes(keyword: string): Uint8Array {
   const bytes = latin1(keyword, 'keyword');
   if (bytes.length < 1 || bytes.length > MAX_KEYWORD) throw new Error('keyword must be 1 to 79 bytes');
   if (keyword.startsWith(' ') || keyword.endsWith(' ')) throw new Error('keyword must not start or end with a space');
+  if (keyword.includes('  ')) throw new Error('keyword must not contain consecutive spaces');
+  // The PNG spec allows printable Latin-1 only: 32 to 126 and 161 to 255.
+  if (bytes.some((byte) => byte < 32 || (byte > 126 && byte < 161))) throw new Error('keyword has a control character');
   return bytes;
 }
 
@@ -70,7 +73,10 @@ function locate(png: Uint8Array): Located[] {
     const length = view.getUint32(offset);
     const end = offset + CHUNK_OVERHEAD + length;
     if (end > png.length) throw new Error('truncated PNG');
-    chunks.push({ type: typeAt(png, offset), start: offset, end, dataStart: offset + 8, dataEnd: offset + 8 + length });
+    const type = typeAt(png, offset);
+    chunks.push({ type, start: offset, end, dataStart: offset + 8, dataEnd: offset + 8 + length });
+    // Anything after IEND is not part of the image: leave it alone.
+    if (type === 'IEND') break;
     offset = end;
   }
   if (chunks[0]?.type !== 'IHDR') throw new Error('PNG has no IHDR');
@@ -94,6 +100,15 @@ export function insertTextChunks(png: Uint8Array, entries: readonly TextEntry[])
   return out;
 }
 
+/** Latin-1 bytes to a string, in slices so a large chunk cannot overflow the call stack. */
+function latin1String(bytes: Uint8Array): string {
+  let out = '';
+  for (let start = 0; start < bytes.length; start += 8192) {
+    out += String.fromCharCode(...bytes.subarray(start, start + 8192));
+  }
+  return out;
+}
+
 export function readTextChunks(png: Uint8Array): TextEntry[] {
   const entries: TextEntry[] = [];
   for (const chunk of locate(png)) {
@@ -101,7 +116,7 @@ export function readTextChunks(png: Uint8Array): TextEntry[] {
     const data = png.subarray(chunk.dataStart, chunk.dataEnd);
     const split = data.indexOf(0);
     if (split < 1) continue;
-    const decode = (bytes: Uint8Array) => String.fromCharCode(...bytes);
+    const decode = latin1String;
     entries.push({ keyword: decode(data.subarray(0, split)), text: decode(data.subarray(split + 1)) });
   }
   return entries;

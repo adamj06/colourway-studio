@@ -7,23 +7,31 @@ import type { Frame } from './recolourClient';
 
 /** The longest side of an exported file: what the viewer shows (the design image is requested at 1600 px). */
 export const EXPORT_MAX_SIDE = 1600;
+const REVOKE_AFTER_MS = 60_000;
 
 /** What to export: a settled recoloured frame, or the untouched design image. */
 export type ExportSource = { kind: 'frame'; frame: Frame } | { kind: 'image'; image: HTMLImageElement };
 
-function drawn(source: ExportSource): HTMLCanvasElement {
+/** A canvas of this size and its 2d context. A missing context is an error: an empty canvas would export blank. */
+function canvasOf(width: number, height: number): { canvas: HTMLCanvasElement; context: CanvasRenderingContext2D } {
   const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d');
+  if (context === null) throw new Error('No 2d canvas context.');
+  return { canvas, context };
+}
+
+function drawn(source: ExportSource): HTMLCanvasElement {
   if (source.kind === 'frame') {
     const { frame } = source;
-    canvas.width = frame.width;
-    canvas.height = frame.height;
-    canvas.getContext('2d')?.putImageData(new ImageData(frame.data, frame.width, frame.height), 0, 0);
+    const { canvas, context } = canvasOf(frame.width, frame.height);
+    context.putImageData(new ImageData(frame.data, frame.width, frame.height), 0, 0);
     return canvas;
   }
   const { width, height } = fitWithin(source.image.naturalWidth, source.image.naturalHeight, EXPORT_MAX_SIDE);
-  canvas.width = width;
-  canvas.height = height;
-  canvas.getContext('2d')?.drawImage(source.image, 0, 0, width, height);
+  const { canvas, context } = canvasOf(width, height);
+  context.drawImage(source.image, 0, 0, width, height);
   return canvas;
 }
 
@@ -42,10 +50,10 @@ function download(blob: Blob, filename: string): void {
   link.href = url;
   link.download = filename;
   link.click();
-  // The click has started the save; revoke afterwards so the object URL does not outlive the download.
+  // Revoke well after the click: some browsers read the blob after it, and revoking at once can cancel the save.
   setTimeout(() => {
     URL.revokeObjectURL(url);
-  }, 0);
+  }, REVOKE_AFTER_MS);
 }
 
 /** Saves `<systemNumber>-colourway.png`. Rejects if the image cannot be read (a tainted canvas) or encoded. */
