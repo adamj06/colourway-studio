@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { WHOLE, type Region } from '@/lib/wall/region';
 import { DEFAULT_REPEATS, MAX_REPEATS, MIN_REPEATS, type Repeat } from '@/lib/wall/tiles';
 import type { ExportSource } from './exportPng';
@@ -13,6 +13,8 @@ type Props = {
   title: string;
   /** True when `source` is the recoloured picture, for the wall's text alternative. */
   recoloured: boolean;
+  /** True when the design image could not be loaded, so `source` will never arrive: say so, don't promise it. */
+  unavailable: boolean;
 };
 
 const REPEAT_LABELS: [Repeat, string][] = [
@@ -21,7 +23,8 @@ const REPEAT_LABELS: [Repeat, string][] = [
 ];
 
 /** The design tiled on a wall: a section with the repeat region, the repeat type and how many repeats fit across. */
-export function WallPreview({ source, title, recoloured }: Props) {
+export function WallPreview({ source, title, recoloured, unavailable }: Props) {
+  const repeatsId = useId();
   const [region, setRegion] = useState<Region>(WHOLE);
   const [repeat, setRepeat] = useState<Repeat>('straight');
   const [repeats, setRepeats] = useState(DEFAULT_REPEATS);
@@ -50,7 +53,9 @@ export function WallPreview({ source, title, recoloured }: Props) {
       </h2>
       {source === null ? (
         <p role="status" className="mt-2 text-sm text-muted">
-          The wall preview is available once the design image has loaded.
+          {unavailable
+            ? 'The wall preview isn’t available because the design image couldn’t be loaded.'
+            : 'The wall preview is available once the design image has loaded.'}
         </p>
       ) : (
         <>
@@ -86,9 +91,14 @@ export function WallPreview({ source, title, recoloured }: Props) {
                 ))}
               </div>
             </fieldset>
-            <label className="block text-sm">
-              Repeats across the wall: {repeats}
+            <div className="text-sm">
+              {/* The name stays the same; the number is a separate <output>, so it isn't read twice or renamed. */}
+              <label htmlFor={repeatsId}>Repeats across the wall</label>
+              <output htmlFor={repeatsId} className="ml-2">
+                {repeats}
+              </output>
               <input
+                id={repeatsId}
                 type="range"
                 min={MIN_REPEATS}
                 max={MAX_REPEATS}
@@ -99,7 +109,7 @@ export function WallPreview({ source, title, recoloured }: Props) {
                 }}
                 className="mt-1 block min-h-11 w-48"
               />
-            </label>
+            </div>
           </div>
           <RegionPicker source={source} region={region} onChange={setRegion} />
         </>

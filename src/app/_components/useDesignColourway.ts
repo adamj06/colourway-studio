@@ -60,7 +60,7 @@ export function useDesignColourway() {
   useShareUrl(encoded);
 
   // What the wall tiles: the same picture the viewer shows (the live frame, preview quality included). Memoised, so
-  // the wall is only repainted when the picture really changes.
+  // an unrelated render does not repaint it; every new recolour frame is a new picture and does.
   const wallFrame = colourway.showOriginal ? null : recolour.frame;
   const wall = useMemo(() => {
     const source: ExportSource | null = wallFrame
@@ -70,12 +70,13 @@ export function useDesignColourway() {
         : null;
     return { source, recoloured: wallFrame !== null };
   }, [wallFrame, palette.image]);
+  const wallUnavailable = palette.status === 'unavailable';
 
   return {
     palette,
     colourway,
     recolour,
-    wall,
+    wall: { ...wall, unavailable: wallUnavailable },
     share: { encoded, ...exportState(colourway.hasEdits, recolour, palette.image, palette.status === 'unavailable') },
     /** A link was opened but its colours could not be read: the page shows the normal palette and says so. */
     linkUnreadable: link.kind === 'invalid' && !colourway.hasEdits,

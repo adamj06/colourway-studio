@@ -74,7 +74,12 @@ function Loaded({ design }: { design: Design }) {
       <div className="mt-6 grid gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div>
           <DesignViewer design={design} palette={palette} colourway={colourway} recolour={recolour} />
-          <WallPreview source={wall.source} title={design.title} recoloured={wall.recoloured} />
+          <WallPreview
+            source={wall.source}
+            title={design.title}
+            recoloured={wall.recoloured}
+            unavailable={wall.unavailable}
+          />
         </div>
         <div>
           <h1 className="font-serif text-4xl leading-tight">{design.title}</h1>

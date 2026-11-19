@@ -44,6 +44,10 @@ function PercentField({ label, value, onCommit }: { label: string; value: number
         onBlur={() => {
           setDraft(null);
         }}
+        // Stepping with the arrow keys can go past what is allowed (4.9 at a 5 minimum): show the real value again.
+        onKeyUp={(event) => {
+          if (event.key === 'ArrowUp' || event.key === 'ArrowDown' || event.key === 'Enter') setDraft(null);
+        }}
         className="mt-1 block min-h-11 w-full border border-rule bg-transparent px-2"
       />
     </label>
@@ -57,23 +61,53 @@ function pointOf(event: React.PointerEvent<HTMLElement>): Point | null {
   return { x: (event.clientX - box.left) / box.width, y: (event.clientY - box.top) / box.height };
 }
 
+/** A press that moves less than this (CSS px) is a tap, not a drag: a finger always wobbles a little. */
+const DRAG_SLOP_PX = 4;
+
+type Drag = { id: number; from: Point; clientX: number; clientY: number; moved: boolean };
+
+/**
+ * Pointer handlers for marking a region. Only the primary button or touch starts a drag, only that pointer moves it,
+ * and anything that ends the gesture (release, cancel, losing capture, no button held) ends it.
+ */
+function useRegionDrag(onChange: (region: Region) => void) {
+  const drag = useRef<Drag | null>(null);
+  const end = () => {
+    drag.current = null;
+  };
+  return {
+    onPointerDown: (event: React.PointerEvent<HTMLElement>) => {
+      const from = pointOf(event);
+      if (!event.isPrimary || event.button !== 0 || from === null) return;
+      event.currentTarget.setPointerCapture(event.pointerId);
+      drag.current = { id: event.pointerId, from, clientX: event.clientX, clientY: event.clientY, moved: false };
+    },
+    onPointerMove: (event: React.PointerEvent<HTMLElement>) => {
+      const current = drag.current;
+      if (current?.id !== event.pointerId) return;
+      const to = pointOf(event);
+      if (event.buttons === 0 || to === null) {
+        end();
+        return;
+      }
+      current.moved ||= Math.hypot(event.clientX - current.clientX, event.clientY - current.clientY) > DRAG_SLOP_PX;
+      if (current.moved) onChange(regionFromPoints(current.from, to));
+    },
+    onPointerUp: end,
+    onPointerCancel: end,
+    onLostPointerCapture: end,
+  };
+}
+
 /** The design with a rectangle on it. Drag to mark one repeat, or type the numbers: the two stay in step. */
 export function RegionPicker({ source, region, onChange }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const dragFrom = useRef<Point | null>(null);
   const percent = toPercent(region);
+  const handlers = useRegionDrag(onChange);
 
   useEffect(() => {
     if (canvasRef.current) paintSource(canvasRef.current, source);
   }, [source]);
-
-  const drag = (event: React.PointerEvent<HTMLElement>) => {
-    const to = pointOf(event);
-    if (dragFrom.current !== null && to !== null) onChange(regionFromPoints(dragFrom.current, to));
-  };
-  const end = () => {
-    dragFrom.current = null;
-  };
 
   return (
     <fieldset className="mt-4">
@@ -81,16 +115,7 @@ export function RegionPicker({ source, region, onChange }: Props) {
       <p className="mt-1 text-sm text-muted">
         Drag on the picture to mark one repeat of the pattern, or type the numbers below.
       </p>
-      <div
-        className="relative mt-3 w-fit max-w-full touch-none select-none"
-        onPointerDown={(event) => {
-          event.currentTarget.setPointerCapture(event.pointerId);
-          dragFrom.current = pointOf(event);
-        }}
-        onPointerMove={drag}
-        onPointerUp={end}
-        onPointerCancel={end}
-      >
+      <div className="relative mt-3 w-fit max-w-full touch-none select-none" {...handlers}>
         <canvas ref={canvasRef} aria-hidden="true" className="block max-h-64 max-w-full cursor-crosshair" />
         <div
           aria-hidden="true"

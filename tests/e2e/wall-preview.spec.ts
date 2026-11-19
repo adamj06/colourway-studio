@@ -6,7 +6,7 @@ import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { expect, test } from './fixtures';
 import { indianDesign, mockVam } from './mock-vam';
-import { bandsPng } from './png';
+import { bandsPng, encodePng, hexToTriple } from './png';
 
 const RED = '#C0392B';
 const BLUE = '#2E86C1';
@@ -40,6 +40,15 @@ const near = (pixel: number[], hex: string, tolerance = 40): boolean =>
 /** Waits until the wall's pixel at `x` is this colour (the wall is painted after the image loads). */
 const expectWallColour = (page: Page, x: number, hex: string) =>
   expect.poll(async () => near(await wallPixel(page, x, ROW), hex), { timeout: SETTLE_WAIT }).toBe(true);
+
+/** The repeat region picture's box, in viewport coordinates (the mouse works in those, so scroll it into view first). */
+async function pickerBox(page: Page) {
+  const thumbnail = page.getByRole('group', { name: 'Repeat region' }).locator('canvas');
+  await thumbnail.scrollIntoViewIfNeeded();
+  const box = await thumbnail.boundingBox();
+  expect(box).not.toBeNull();
+  return box!;
+}
 
 async function openBands(page: Page) {
   await mockVam(page, { imagePng: bandsPng([RED, BLUE]) });
@@ -83,12 +92,7 @@ test.describe('the wall preview', () => {
 
   test('dragging on the picture marks a region and updates the numbers', async ({ page }) => {
     await openBands(page);
-    const thumbnail = page.getByRole('group', { name: 'Repeat region' }).locator('canvas');
-    // The mouse works in viewport coordinates, so the picture has to be on screen before it is measured.
-    await thumbnail.scrollIntoViewIfNeeded();
-    const box = await thumbnail.boundingBox();
-    expect(box).not.toBeNull();
-    const { x, y, width, height } = box!;
+    const { x, y, width, height } = await pickerBox(page);
 
     await page.mouse.move(x + width * 0.1, y + height * 0.2);
     await page.mouse.down();
@@ -102,13 +106,25 @@ test.describe('the wall preview', () => {
     expect(await value('Height (%)')).toBeCloseTo(50, 0);
   });
 
-  test('half-drop is a choice, and the wall says which repeat it shows', async ({ page }) => {
-    await openBands(page);
+  test('half-drop drops every second column by half a tile', async ({ page }) => {
+    // Top half red, bottom half blue. At 4 repeats a tile is 300 x 750, so the red/blue edge is 375 px down the tile.
+    // Straight: the second column (x 300 to 600) is red at the top of the wall. Half-drop: it starts 375 px higher,
+    // so the top of the wall is in the blue half of its tile.
+    const [red, blue] = [hexToTriple(RED), hexToTriple(BLUE)];
+    await mockVam(page, { imagePng: encodePng(40, 100, (_x, y) => (y < 50 ? red : blue)) });
+    await page.goto(designUrl);
+    await expect(wall(page)).toBeVisible();
+    const secondColumn = async () => near(await wallPixel(page, 450, ROW), BLUE);
+    await expect.poll(async () => near(await wallPixel(page, 450, ROW), RED), { timeout: SETTLE_WAIT }).toBe(true);
 
     await page.getByRole('radio', { name: 'Half-drop' }).check();
 
     await expect(wall(page)).toHaveAccessibleName(/as a half-drop repeat on a wall$/);
-    await expectWallColour(page, IN_RED, RED);
+    await expect.poll(secondColumn, { timeout: SETTLE_WAIT }).toBe(true);
+    expect(near(await wallPixel(page, IN_RED, ROW), RED), 'the first column does not move').toBe(true);
+
+    await page.getByRole('radio', { name: 'Straight' }).check();
+    await expect.poll(async () => near(await wallPixel(page, 450, ROW), RED), { timeout: SETTLE_WAIT }).toBe(true);
   });
 
   test('more repeats across make the tiles narrower', async ({ page }) => {
@@ -134,6 +150,53 @@ test.describe('the wall preview', () => {
 
     await page.getByRole('button', { name: 'Show original' }).click();
     await expectWallColour(page, IN_RED, RED);
+  });
+
+  test('a tap that wobbles a pixel leaves the region alone', async ({ page }) => {
+    await openBands(page);
+    const { x, y, width, height } = await pickerBox(page);
+
+    await page.mouse.move(x + width * 0.5, y + height * 0.5);
+    await page.mouse.down();
+    await page.mouse.move(x + width * 0.5 + 1, y + height * 0.5 + 1);
+    await page.mouse.up();
+
+    await expect(page.getByLabel('Width (%)')).toHaveValue('100');
+    await expect(page.getByLabel('Height (%)')).toHaveValue('100');
+  });
+
+  test('a right-click does not start a drag, and moving with no button held does nothing', async ({ page }) => {
+    await openBands(page);
+    const { x, y, width, height } = await pickerBox(page);
+
+    await page.mouse.move(x + width * 0.1, y + height * 0.1);
+    await page.mouse.down({ button: 'right' });
+    await page.mouse.up({ button: 'right' });
+    await page.mouse.move(x + width * 0.8, y + height * 0.8, { steps: 5 });
+
+    await expect(page.getByLabel('Width (%)')).toHaveValue('100');
+    await expect(page.getByLabel('Left (%)')).toHaveValue('0');
+  });
+
+  test('stepping a number below its limit shows the real value again', async ({ page }) => {
+    await openBands(page);
+    const width = page.getByLabel('Width (%)');
+    await width.fill('5');
+
+    await width.press('ArrowDown');
+
+    // 4.9 is below the 5% minimum: the region stays at 5, and so must the box.
+    await expect(width).toHaveValue('5');
+  });
+
+  test('says so when the design image could not be loaded', async ({ page }) => {
+    await mockVam(page, { imageStatus: 404 });
+    await page.goto(designUrl);
+
+    await expect(
+      page.getByText('The wall preview isn’t available because the design image couldn’t be loaded.'),
+    ).toBeVisible();
+    await expect(page.getByText('available once the design image has loaded')).toHaveCount(0);
   });
 
   test('has no serious accessibility violations', async ({ page }) => {
