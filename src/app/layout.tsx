@@ -15,10 +15,15 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="en" className={`${sans.variable} ${serif.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
-        <header className="mx-auto w-full max-w-6xl px-5 pt-8 sm:px-8">
+        <header className="mx-auto flex w-full max-w-6xl flex-wrap items-baseline justify-between gap-x-6 gap-y-2 px-5 pt-8 sm:px-8">
           <Link href="/" className="font-serif text-2xl tracking-wide text-foreground no-underline">
             Colourway Studio
           </Link>
+          <nav aria-label="Site">
+            <Link href="/how-built" className="text-sm text-muted underline">
+              How this was built
+            </Link>
+          </nav>
         </header>
         <div className="flex-1">{children}</div>
         <footer className="mx-auto w-full max-w-6xl border-t border-rule px-5 py-8 text-sm text-muted sm:px-8">
