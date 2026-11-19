@@ -27,7 +27,7 @@ test.describe('browse and open a design', () => {
 
     await expect(page).toHaveURL(/\/design\/O78207$/);
     await expect(page.getByRole('heading', { level: 1, name: indianDesign.title })).toBeVisible();
-    const image = page.getByRole('img', { name: /Indian/ });
+    const image = page.getByRole('img', { name: 'Indian, wallpaper sample' });
     await expect(image).toHaveAttribute(
       'src',
       /^https:\/\/framemark\.vam\.ac\.uk\/collections\/2020MN1492\/full\/!1600,1600\/0\/default\.jpg$/,

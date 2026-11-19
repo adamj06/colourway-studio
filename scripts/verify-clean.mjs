@@ -6,7 +6,9 @@
 import { spawnSync } from 'node:child_process';
 import { rmSync } from 'node:fs';
 
-const STEPS = ['format:check', 'lint', 'typecheck', 'test', 'build', 'size'];
+// `test` runs with coverage, exactly as CI does (.github/workflows/ci.yml): the coverage thresholds are a gate there,
+// and plain `vitest run` passed locally while CI failed on the overall line threshold (006-wall-preview).
+const STEPS = ['format:check', 'lint', 'typecheck', 'test -- --coverage', 'build', 'size'];
 
 rmSync('.next', { recursive: true, force: true });
 process.stdout.write('verify:clean: removed .next\n');

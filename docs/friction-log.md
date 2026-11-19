@@ -252,3 +252,19 @@ Template:
 - **Resolved by:** Adam raised the cap. `budget.mjs` now lets a prompt through, with a note, when it starts with `<task-notification` or `<agent-message`, and still blocks human prompts (8 new tests). The guard's prefix match is only tested with synthetic prompts, not the real hook input. One of my edits to the guard was reported as rejected but the change was in the file, so I checked the file rather than trusting the tool result.
 - **Prevention:** The hook change above. Proposed, not applied (CLAUDE.md is guarded), in "Cost discipline": add "If a background task or subagent you started has not reported back, read its output file or tell Adam; do not wait on it silently."
 - **Caught by:** human
+
+## 2026-11-19 01:40: verify:clean passed but CI would have failed the coverage gate
+
+- **Doing:** 006-wall-preview, about to report the feature done after `npm run verify:clean` passed.
+- **What went wrong:** I treated `verify:clean` as the same as CI, but CI runs `npm run test -- --coverage` and `verify:clean` runs plain `test`. Overall line coverage was 79.18% against the 80% gate because a browser-only `.ts` file under `src/app` (`wallDraw.ts`) counts and had 0%. My first fix (extracting the pure plan into `src/lib/wall`) was not enough: 79.25%. I also never ran coverage myself before calling it green.
+- **Resolved by:** The code-reviewer found it. Unit tests for the drawing code with a fake canvas (80.4%), not an exclusion or a lower threshold.
+- **Prevention:** Applied with Adam's OK (`scripts/verify-clean.mjs` is guarded, and CLAUDE.md's "verify:clean sees what CI sees" would then be true): replace `const STEPS = ['format:check', 'lint', 'typecheck', 'test', 'build', 'size'];` with steps that carry their own arguments, running `npm run test -- --coverage` in place of `npm run test`. The step is now `test -- --coverage`; a full run passes at 80.4%.
+- **Caught by:** reviewer agent
+
+## 2026-11-19 02:10: An edit script corrupted a file's encoding
+
+- **Doing:** 006-wall-preview, adding e2e tests with a Python script (several edits at once).
+- **What went wrong:** On Windows, Python's `open()` defaults to cp1252 (and CRLF), so two curly apostrophes went into `tests/e2e/wall-preview.spec.ts` as single 0x92 bytes: invalid UTF-8. The Edit tool would have refused the file, and prettier would not have noticed.
+- **Resolved by:** The Read tool flagged the encoding. I repaired the bytes, checked every file the script touched decoded as UTF-8, and confirmed Prettier had normalised the line endings.
+- **Prevention:** Use the Edit tool for source edits; if a script is really needed, `open(p, encoding='utf-8', newline='')`. No CLAUDE.md change proposed.
+- **Caught by:** agent itself
