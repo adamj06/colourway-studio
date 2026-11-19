@@ -130,5 +130,20 @@
     ],
     "reviewFindingsFixed": 10,
     "prUrl": "https://github.com/adamj06/colourway-studio/pull/17"
+  },
+  {
+    "id": "008-palette-k-topup",
+    "title": "Palette returns the number of colours asked for",
+    "date": "2026-11-19",
+    "summary": "Issue #19: merging near-duplicate k-means clusters left fewer swatches than the k picked. Extraction now tops up by re-running k-means with more clusters (up to 2k) until k distinct swatches remain, keeps the k largest and re-measures their shares, and stops early after two extra runs that add nothing (a noisy image otherwise cost up to 6.8 s). When an image really has fewer distinct colours the panel says so; palettes opened from a share link never show that note.",
+    "models": ["claude-opus-5-5", "claude-sonnet-5-5"],
+    "subagents": ["test-writer", "code-reviewer", "security-reviewer"],
+    "humanInterventions": [
+      "Adam chose 'top up to k' over removing the merge or only explaining it in the UI.",
+      "Adam told me to pull main when I wanted to stack on feat/007-how-built: I had branched from a stale local main that lacked the unmerged 004 to 007 code the issue is about.",
+      "Not human-caught: the 6.8 s worst case, the false note on share links and the unchecked cast were found by the code and security reviewers, and one test-writer assertion (top share above 0.5) was wrong and corrected to 0.4."
+    ],
+    "reviewFindingsFixed": 5,
+    "prUrl": null
   }
 ]
