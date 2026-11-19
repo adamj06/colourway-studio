@@ -21,9 +21,13 @@ const image = z
     path: ['data'],
   });
 
+const lab = z.tuple([z.number(), z.number(), z.number()]);
+
 export const requestSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('analyse'), id, k, image }),
   z.object({ type: z.literal('set-k'), id, k }),
+  // A palette that came from a share link: measure how much of `image` each of these swatches covers.
+  z.object({ type: z.literal('shares'), id, labs: z.array(lab).min(1).max(MAX_K), image }),
 ]);
 
 const swatch = z.object({
@@ -34,6 +38,7 @@ const swatch = z.object({
 
 export const responseSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('palette'), id, k, swatches: z.array(swatch).max(MAX_K) }),
+  z.object({ type: z.literal('shares'), id, shares: z.array(z.number().min(0).max(1)).max(MAX_K) }),
   z.object({ type: z.literal('error'), id: id.nullable(), message: z.string() }),
 ]);
 

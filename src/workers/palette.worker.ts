@@ -4,6 +4,7 @@
 // Two ways in:
 //  - 'analyse-bitmap': an ImageBitmap transferred from the page (already decoded, downscaled by createImageBitmap).
 //    It is read through an OffscreenCanvas here, then handled exactly like pixels.
+//  - 'shares-bitmap': the same, for a palette that came from a share link (measure shares, no k-means).
 //  - anything else (the fallback path sends RGBA pixels, and 'set-k') goes straight to the validated handler.
 import { z } from 'zod';
 import { createPaletteHandler } from './palette-handler';
@@ -17,16 +18,31 @@ type WorkerScope = {
 const scope = self as unknown as WorkerScope;
 const handler = createPaletteHandler();
 
-const bitmapRequest = z.object({
-  type: z.literal('analyse-bitmap'),
-  id: z.number().int().nonnegative(),
-  k: z.number().int().min(MIN_K).max(MAX_K),
-  bitmap: z
-    .instanceof(ImageBitmap)
-    .refine((b) => b.width >= 1 && b.height >= 1 && b.width <= MAX_IMAGE_SIDE && b.height <= MAX_IMAGE_SIDE, {
-      message: 'bitmap size is outside the accepted range',
-    }),
-});
+const bitmapOf = z
+  .instanceof(ImageBitmap)
+  .refine((b) => b.width >= 1 && b.height >= 1 && b.width <= MAX_IMAGE_SIDE && b.height <= MAX_IMAGE_SIDE, {
+    message: 'bitmap size is outside the accepted range',
+  });
+const id = z.number().int().nonnegative();
+
+const bitmapRequest = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('analyse-bitmap'),
+    id,
+    k: z.number().int().min(MIN_K).max(MAX_K),
+    bitmap: bitmapOf,
+  }),
+  // A palette from a share link: measure how much of the bitmap each of these swatches covers.
+  z.object({
+    type: z.literal('shares-bitmap'),
+    id,
+    labs: z
+      .array(z.tuple([z.number(), z.number(), z.number()]))
+      .min(1)
+      .max(MAX_K),
+    bitmap: bitmapOf,
+  }),
+]);
 
 /** A rejected request still owns a transferred bitmap: release it now instead of waiting for garbage collection. */
 function releaseBitmap(data: unknown): void {
@@ -53,7 +69,12 @@ function readPixels(bitmap: ImageBitmap): { width: number; height: number; data:
 async function handleBitmap(message: z.infer<typeof bitmapRequest>): Promise<void> {
   try {
     const image = readPixels(message.bitmap);
-    await handler.handle({ type: 'analyse', id: message.id, k: message.k, image }, post);
+    await handler.handle(
+      message.type === 'analyse-bitmap'
+        ? { type: 'analyse', id: message.id, k: message.k, image }
+        : { type: 'shares', id: message.id, labs: message.labs, image },
+      post,
+    );
   } catch {
     post({ type: 'error', id: message.id, message: 'Could not read the image.' });
   } finally {
